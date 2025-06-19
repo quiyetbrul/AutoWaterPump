@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Arduino: Compile",
+			"type": "shell",
+			"command": "arduino-cli",
+			"args": [
+				"compile",
+				"--fqbn",
+				"arduino:avr:uno",
+				"src/"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$gcc"
+			]
+		}
+	]
+}
