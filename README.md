@@ -40,8 +40,12 @@ The AutoWaterPump is an intelligent plant watering system built on Arduino Uno t
 
 ## 📸 Other Assets to Look At :D
 
+![AutoWaterPump](assets/auto_water.gif)
+
 ![Proto_1](assets/prototype_1.png)
 
-![AutoWaterPump](assets/auto_water.gif)
+![Proto_1.1](assets/prototype_1.1.png)
+
+![Proto_1.2](assets/prototype_1.2.png)
 
 ## Happy Gardening! 🌿
