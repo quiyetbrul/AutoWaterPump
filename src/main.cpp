@@ -161,6 +161,7 @@ void printAnimation(String message) {
     delay(bootAnimationDelay);
   }
   lcd.noBlink();
+  lcd.clear();
 }
 
 void displayStartup() {
@@ -438,7 +439,6 @@ void showClock() {
     lcd.clear();
   }
 
-  String moistureCheck = "  Measuring...  ";
   displayDateMessage = true;
   lastMessageSwitch = millis();
   lcd.clear();
@@ -450,9 +450,8 @@ void showClock() {
     if (isButtonPressed(buttonPins[2])) {
       lcd.clear();
       printMessage(0, 0, "Moisture Lvl:");
-      printAnimation(moistureCheck);
-
-      readSoilMoisture();
+      printAnimation("  Measuring...  ");
+      printMessage(0, 1, readSoilMoisture() + "%");
       delay(messageDisplayDuration);
       lcd.clear();
       printMessage(0, 0, "      Done     ");
@@ -461,10 +460,9 @@ void showClock() {
     if (isButtonPressed(buttonPins[3])) {
       if (isAutoModeEnabled) {
         lcd.clear();
-        lcd.print("  [Auto Mode]");
-        lcd.setCursor(0, 1);
+        printMessage(0, 0, "  [Auto Mode]");
         delay(500);
-        lcd.print("  Disabled :(");
+        printMessage(0, 1, "  Disabled :(");
         isAutoModeEnabled = false;
         delay(2000);
       }
