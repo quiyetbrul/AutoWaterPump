@@ -21,12 +21,11 @@ In this project, I focused on the hardware side. I learned soldering, reading an
 
 - **16x2 LCD Display**: Clear status and menu navigation
 - **4-button control**: Easy navigation and settings
-- **Multiple menu pages**: Auto watering, manual control, settings, calibration, debug
+- **Multiple menu pages**: Auto watering, manual control, settings, calibration
 
 ### 🔧 Manual Control
 
 - **Manual watering mode**: Override automatic system
-- **Pump speed control**: Adjust flow rate manually
 - **Real-time monitoring**: View sensor readings during operation
 
 ### 🕒 Real-Time Clock Integration
