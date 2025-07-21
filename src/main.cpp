@@ -102,6 +102,7 @@ void formatTime(int &hour, bool &isPM);
 void printInstructions();
 void printTime(const int hour, const bool isPM);
 void printMessage(int x, int y, const String &message);
+void printAnimation(String message);
 
 String getMoistureValue();
 String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
@@ -151,19 +152,20 @@ void loop() {
   }
 }
 
-void displayStartup() {
-  String title = "Water Pump Menu";
-
-  printMessage(0, 0, title);
+void printAnimation(String message) {
   lcd.setCursor(0, 1);
   lcd.blink();
-
-  String loading = "    Loading....";
-  for (int i = 0; i < loading.length(); ++i) {
-    lcd.print(loading.charAt(i));
+  for (int i = 0; i < message.length(); ++i) {
+    lcd.print(message.charAt(i));
     delay(bootAnimationDelay);
   }
+  lcd.noBlink();
+}
 
+void displayStartup() {
+  String title = "Water Pump Menu";
+  printMessage(0, 0, title);
+  printAnimation("    Loading....");
   delay(bootWait);
 }
 
@@ -171,10 +173,7 @@ void showMessageCycle() {
   if (millis() - lastMessageSwitch >= messageDisplayDuration) {
     lcd.noBlink();
     lcd.clear();
-    printMessage(0, 0, " ");
-    lcd.write(243);
-    lcd.print(" MainMenu ");
-    lcd.write(243);
+    printMessage(0, 0, " MainMenu ");
     printMessage(0, 1, messagesHomeScreen[messageIndex]);
 
     messageIndex = (messageIndex + 1) % totalMessages;
@@ -289,34 +288,35 @@ void showMessageCycleClock() {
   printMessage(10, 0, getMoistureValue());
 
   if (!isAutoModeEnabled) {
-    printMessage(0, 1, getDate())
-
-  } else {
-    if (millis() - lastMessageSwitch >= dateAndCountDownDelay) {
-      displayDateMessage = !displayDateMessage;
-      lastMessageSwitch = nowMs;
-      printMessage(0, 1, "                ");
-    }
-
-    if (displayDateMessage) {
-      printMessage(0, 1, getDate())
-    } else {
-      unsigned long elaspedTime = nowMs - autoTimer;
-      unsigned long remainingTime = 0;
-      unsigned long intervalMilli = waterInterval * 1000;
-
-      if (elaspedTime < intervalMilli) {
-        remainingTime = intervalMilli - elaspedTime;
-      }
-
-      unsigned long totalSecondsRemaining = remainingTime / 1000;
-      unsigned long hoursPart = totalSecondsRemaining / 3600UL;
-      unsigned long minutesPart = (totalSecondsRemaining % 3600UL) / 60UL;
-      printMessage(0, 1, "Feeds in: ");
-      printMessage(10, 1,
-                   getNextFeed(totalSecondsRemaining, hoursPart, minutesPart));
-    }
+    printMessage(0, 1, getDate());
+    return;
   }
+
+  if (millis() - lastMessageSwitch >= dateAndCountDownDelay) {
+    displayDateMessage = !displayDateMessage;
+    lastMessageSwitch = nowMs;
+    printMessage(0, 1, "                ");
+  }
+
+  if (displayDateMessage) {
+    printMessage(0, 1, getDate());
+    return;
+  }
+
+  unsigned long elaspedTime = nowMs - autoTimer;
+  unsigned long remainingTime = 0;
+  unsigned long intervalMilli = waterInterval * 1000;
+
+  if (elaspedTime < intervalMilli) {
+    remainingTime = intervalMilli - elaspedTime;
+  }
+
+  unsigned long totalSecondsRemaining = remainingTime / 1000;
+  unsigned long hoursPart = totalSecondsRemaining / 3600UL;
+  unsigned long minutesPart = (totalSecondsRemaining % 3600UL) / 60UL;
+  printMessage(0, 1, "Feeds in: ");
+  printMessage(10, 1,
+               getNextFeed(totalSecondsRemaining, hoursPart, minutesPart));
 }
 
 void checkButtons() {
@@ -447,20 +447,12 @@ void showClock() {
       if (digitalRead(buttonPins[2]) == LOW) {
         lcd.clear();
         printMessage(0, 0, "Moisture Lvl:");
-        lcd.setCursor(0, 1);
-        lcd.blink();
-
-        for (int i = 0; i < moistureCheck.length(); ++i) {
-          lcd.print(moistureCheck.charAt(i));
-          delay(bootAnimationDelay);
-        }
+        printAnimation(moistureCheck);
 
         readSoilMoisture();
         delay(messageDisplayDuration);
         lcd.clear();
         printMessage(0, 0, "      Done     ");
-        lcd.clear();
-        lcd.noBlink();
         lcd.clear();
       }
     } else if (digitalRead(buttonPins[3]) == LOW) {
