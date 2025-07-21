@@ -22,25 +22,19 @@ const int waterDetectionPower = 13;
 const int waterSensorPin = 12;
 const int DRY_VALUE = 300;
 const int WET_VALUE = 880;
-const int READ_DELAY = 200;
 const int waterDetectThreshold = 350;
 unsigned long lastRawMoistureValue = 0;
 
 const int pumpValvePin = 9;
 const int pumpPin = 10;
 const int pumpValveTiming = 2000;
-const int pumpLowSetting = 90;
-const int pumpMidSetting = 150;
 const int pumpHighSetting = 255;
 unsigned long waterInterval = 0;
 unsigned long waterIntervalHour = 60;
 unsigned long waterIntervalDelta = 60;
 unsigned long waterDuration = 20000UL;
 
-float waterCupsTarget = 1.0;
 float moistureLevel = 0.0;
-unsigned long waterIntervalHours = 24;
-unsigned long lastWaterTime = 0;
 unsigned long oneCupCalibrated = 0;
 unsigned long autoWaterDurationMillis = 0;
 
@@ -59,7 +53,6 @@ unsigned long debounceDuration = 100;
 byte lastButtonState;
 
 bool isAutoModeEnabled = false;
-bool recentBranch = false;
 bool showInstructions = false;
 bool displayDateMessage = true;
 byte currentMenu = 0;
@@ -195,46 +188,48 @@ void formatTime(int &hour, bool &isPM) {
 
 String getMoistureValue() {
   int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
-  if (mP > 100) {
-    return mP + "%";
-  }
-  String moistureValue = " ";
+  mP = constrain(mP, 0, 100); // Ensure within valid range
 
+  String moistureValue = "";
   if (mP < 10) {
-    moistureValue += " ";
+    moistureValue += "  "; // Two spaces for single digit
+  } else {
+    moistureValue += " "; // One space for double digit
   }
 
-  moistureValue += mP + "%";
-
+  moistureValue += String(mP) + "%";
   return moistureValue;
 }
 
 String getNextFeed(const unsigned long totalSecondsRemaining,
                    const unsigned long hoursPart,
                    const unsigned long minutesPart) {
-  String nextFeed = totalSecondsRemaining;
+  String nextFeed = String(totalSecondsRemaining);
   if (totalSecondsRemaining < 60) {
     return nextFeed + " Sec";
   }
 
+  nextFeed = "";
   if (hoursPart < 10) {
-    nextFeed += " "
+    nextFeed += " ";
   }
-  nextFeed += hoursPart + "H";
+  nextFeed += String(hoursPart) + "H";
 
   if (minutesPart < 10) {
     nextFeed += "0";
   }
-  nextFeed += minutesPart + "M";
+  nextFeed += String(minutesPart) + "M";
 
   return nextFeed;
 }
 
 String getTime(const int hour, const bool isPM) {
-  String time = hour < 10 ? "0" + hour : hour;
+  RtcDateTime now = rtc.GetDateTime();
+  String time = hour < 10 ? "0" + String(hour) : String(hour);
   time += showColon ? ':' : ' ';
-  time += now.Minute() < 10 ? "0" + now.Minute() : now.Minute();
-  time += " " + isPM ? "PM" : "AM";
+  time += now.Minute() < 10 ? "0" + String(now.Minute()) : String(now.Minute());
+  time += " ";
+  time += isPM ? "PM" : "AM";
 
   return time;
 }
@@ -495,7 +490,7 @@ void setDateTime() {
       printMessage(0, 0, "Set Month: " + month);
       break;
     case SET_DAY:
-      printMessage(0, 0, "Set Date: " + date);
+      printMessage(0, 0, "Set Day: " + String(day));
       break;
     case SET_HOUR:
       printMessage(0, 0, "Set Hour: " + hour);
