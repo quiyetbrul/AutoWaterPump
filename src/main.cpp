@@ -98,13 +98,16 @@ void disableMessages();
 void autoWateringCheck();
 bool isPlantOkayToWater();
 void formatTime(int &hour, bool &isPM);
+
+void printInstructions();
 void printTime(const int hour, const bool isPM);
-void printMoistureValue();
 void printMessage(int x, int y, const String &message);
+
+String getMoistureValue();
 String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
                    unsigned long minutesPart);
-String getDate();
 String getTime(const int hour, const bool isPM);
+String getDate();
 
 void setup() {
   lcd.init();
@@ -133,7 +136,6 @@ void setup() {
 }
 
 void loop() {
-
   if (isWaterDetected()) {
     lcd.clear();
     printMessage(0, 0, "Water Lvl Low!");
@@ -190,14 +192,20 @@ void formatTime(int &hour, bool &isPM) {
   }
 }
 
-void printMoistureValue() {
+String getMoistureValue() {
   int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
-  if (mP < 100)
-    lcd.print(' ');
-  if (mP < 10)
-    lcd.print(' ');
-  lcd.print(mP);
-  lcd.print('%');
+  if (mP > 100) {
+    return mP + "%";
+  }
+  String moistureValue = " ";
+
+  if (mP < 10) {
+    moistureValue += " ";
+  }
+
+  moistureValue += mP + "%";
+
+  return moistureValue;
 }
 
 String getNextFeed(const unsigned long totalSecondsRemaining,
@@ -246,6 +254,18 @@ String getDate() {
   return date;
 }
 
+void printInstructions() {
+  lcd.clear();
+  printMessage(0, 0, "Use buttons to:");
+  printMessage(0, 1, "-/+ to change");
+  delay(transitionDelay);
+
+  lcd.clear();
+  printMessage(0, 0, "M: Confirm/Next");
+  printMessage(0, 1, "A: Exit");
+  delay(transitionDelay);
+}
+
 void printMessage(int x, int y, const String &message) {
   lcd.setCursor(x, y);
   lcd.print(message);
@@ -266,7 +286,7 @@ void showMessageCycleClock() {
   printMessage(0, 0, getTime(hour, isPM));
 
   lcd.setCursor(10, 0);
-  printMoistureValue();
+  printMessage(10, 0, getMoistureValue());
 
   if (!isAutoModeEnabled) {
     printMessage(0, 1, getDate())
@@ -348,19 +368,7 @@ void handleMenu(byte menu) {
 
 void settingsMenu() {
   if (showInstructions) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Use buttons to:");
-    lcd.setCursor(0, 1);
-    lcd.print("-/+ to change");
-    delay(transitionDelay);
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("M: Confirm/Next");
-    lcd.setCursor(0, 1);
-    lcd.print("A: Exit");
-    delay(transitionDelay);
+    printInstructions();
   }
 
   const byte totalSettings = 3;
@@ -371,10 +379,8 @@ void settingsMenu() {
 
   while (true) {
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Select Option:");
-    lcd.setCursor(0, 1);
-    lcd.print(options[selected]);
+    printMessage(0, 0, "Select Option:");
+    printMessage(0, 1, options[selected]);
 
     delay(inputDebounceDelay);
     while (true) {
@@ -409,9 +415,8 @@ void settingsMenu() {
           ;
         lcd.clear();
         lcd.print("Please Wait ^_^ ");
-        lcd.setCursor(0, 1);
         delay(200);
-        lcd.print("    Exiting");
+        printMessage(0, 1, "    Exiting");
         delay(exitDelay);
         return;
       }
@@ -423,19 +428,7 @@ void settingsMenu() {
 
 void showClock() {
   if (showInstructions) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Use buttons to:");
-    lcd.setCursor(0, 1);
-    lcd.print("-/+ to change");
-    delay(transitionDelay);
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("M: Confirm/Next");
-    lcd.setCursor(0, 1);
-    lcd.print("A: Exit");
-    delay(transitionDelay);
+    printInstructions();
     lcd.clear();
   }
 
@@ -452,8 +445,7 @@ void showClock() {
       delay(inputDebounceDelay);
       if (digitalRead(buttonPins[2]) == LOW) {
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Moisture Lvl:");
+        printMessage(0, 0, "Moisture Lvl:");
         lcd.setCursor(0, 1);
         lcd.blink();
 
@@ -465,8 +457,7 @@ void showClock() {
         readSoilMoisture();
         delay(messageDisplayDuration);
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("      Done     ");
+        printMessage(0, 0, "      Done     ");
         lcd.clear();
         lcd.noBlink();
         lcd.clear();
@@ -511,97 +502,69 @@ void setDateTime() {
 
     switch (step) {
     case SET_YEAR:
-      lcd.setCursor(0, 0);
-      lcd.print("Set Year: ");
-      lcd.print(year);
+      printMessage(0, 0, "Set Year: " + year);
       break;
     case SET_MONTH:
-      lcd.setCursor(0, 0);
-      lcd.print("Set Month: ");
-      lcd.print(month);
+      printMessage(0, 0, "Set Month: " + month);
       break;
     case SET_DAY:
-      lcd.setCursor(0, 0);
-      lcd.print("Set Day: ");
-      lcd.print(day);
+      printMessage(0, 0, "Set Date: " + date);
       break;
     case SET_HOUR:
-      lcd.setCursor(0, 0);
-      lcd.print("Set Hour: ");
-      lcd.print(hour);
+      printMessage(0, 0, "Set Hour: " + hour);
       break;
     case SET_MINUTE:
-      lcd.setCursor(0, 0);
-      lcd.print("Set Minute: ");
-      lcd.print(minute);
+      printMessage(0, 0, "Set Minute: " + minute);
       break;
     default:
       break;
     }
 
-    lcd.setCursor(0, 1);
-    lcd.print("(-)(+)(M)Next");
+    printMessage(0, 1, "(-)(+)(M)Next");
 
     while (true) {
-      if (isButtonPressed(buttonPins[0])) {
-        switch (step) {
-        case SET_YEAR:
-          if (year > 2000)
-            --year;
-          break;
-        case SET_MONTH:
-          if (month > 1)
-            --month;
-          break;
-        case SET_DAY:
-          if (day > 1)
-            --day;
-          break;
-        case SET_HOUR:
-          if (hour > 0)
-            --hour;
-          break;
-        case SET_MINUTE:
-          if (minute > 0)
-            --minute;
-          break;
-        }
-        break;
-      } else if (isButtonPressed(buttonPins[1])) {
-        switch (step) {
-        case SET_YEAR:
-          if (year < 2099)
-            ++year;
-          break;
-        case SET_MONTH:
-          if (month < 12)
-            ++month;
-          break;
-        case SET_DAY:
-          if (day < 31)
-            ++day;
-          break;
-        case SET_HOUR:
-          if (hour < 23)
-            ++hour;
-          break;
-        case SET_MINUTE:
-          if (minute < 59)
-            ++minute;
-          break;
-        }
-        break;
-      } else if (isButtonPressed(buttonPins[2])) {
-        step = static_cast<Step>(step + 1);
-        break;
-      } else if (isButtonPressed(buttonPins[3])) {
+      // finished setting date and time
+      if (isButtonPressed(buttonPins[3])) {
         lcd.clear();
-        lcd.print("Please Wait ^_^ ");
-        lcd.setCursor(0, 1);
+        printMessage(0, 0, "Please Wait ^_^ ");
         delay(200);
-        lcd.print("    Exiting");
+        printMessage(0, 1, "    Exiting");
         delay(exitDelay);
         return;
+      }
+
+      // finish setting current step
+      if (isButtonPressed(buttonPins[2])) {
+        step = static_cast<Step>(step + 1);
+        break;
+      }
+
+      // Handle increment/decrement buttons
+      int direction = 0;
+      if (isButtonPressed(buttonPins[0]))
+        direction = -1; // Decrement
+      if (isButtonPressed(buttonPins[1]))
+        direction = 1; // Increment
+
+      if (direction != 0) {
+        switch (step) {
+        case SET_YEAR:
+          year = constrain(year + direction, 2000, 2099);
+          break;
+        case SET_MONTH:
+          month = constrain(month + direction, 1, 12);
+          break;
+        case SET_DAY:
+          day = constrain(day + direction, 1, 31);
+          break;
+        case SET_HOUR:
+          hour = constrain(hour + direction, 0, 23);
+          break;
+        case SET_MINUTE:
+          minute = constrain(minute + direction, 0, 59);
+          break;
+        }
+        break;
       }
     }
 
@@ -612,7 +575,7 @@ void setDateTime() {
   rtc.SetDateTime(newTime);
 
   lcd.clear();
-  lcd.print("Time Set!");
+  printMessage(0, 0, "Time Set!");
   delay(exitDelay);
 }
 
