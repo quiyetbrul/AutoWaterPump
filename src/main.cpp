@@ -723,7 +723,7 @@ void autoWatering() {
 void waterPlant() {
   if (isPlantOkayToWater()) {
     lcd.clear();
-    lcd.print("Watering plant..");
+    printMessage(0, 0, "Watering plant..");
     digitalWrite(pumpValvePin, HIGH);
     delay(pumpValveTiming);
     analogWrite(pumpPin, pumpHighSetting);
@@ -732,7 +732,7 @@ void waterPlant() {
     delay(pumpValveTiming);
     digitalWrite(pumpValvePin, LOW);
     lcd.clear();
-    lcd.print("Done!");
+    printMessage(0, 0, "Done!");
     delay(exitDelay);
     lcd.clear();
   }
@@ -740,12 +740,8 @@ void waterPlant() {
 
 float readSoilMoisture() {
   digitalWrite(pinSoilPower, HIGH);
-  delay(READ_DELAY);
-
   lastRawMoistureValue = analogRead(pinSoilRead);
-  delay(READ_DELAY);
   digitalWrite(pinSoilPower, LOW);
-
   float moisturePercent = calculateMoisture(lastRawMoistureValue);
 
   return moisturePercent;
@@ -924,9 +920,8 @@ void waterCalibrationTest() {
 
 void disableMessages() {
   lcd.clear();
-  lcd.print("Show Tips?");
-  lcd.setCursor(0, 1);
-  lcd.print("(-)= No (+)=Yes");
+  printMessage(0, 0, "Show Tips?");
+  printMessage(0, 1, "(-)= No (+)=Yes");
 
   while (true) {
     if (isButtonPressed(buttonPins[0])) {
@@ -934,14 +929,14 @@ void disableMessages() {
       if (isButtonPressed(buttonPins[0])) {
         showInstructions = false;
         lcd.clear();
-        lcd.print("  Tip messages:  ");
-        lcd.setCursor(0, 1);
+        printMessage(0, 0, "  Tip messages:  ");
         delay(500);
-        lcd.print("  Disabled     ");
+        printMessage(0, 1, "  Disabled     ");
         delay(1000);
         return;
       }
-    } else if (isButtonPressed(buttonPins[1])) {
+    }
+    if (isButtonPressed(buttonPins[1])) {
       delay(inputDebounceDelay);
       if (isButtonPressed(buttonPins[1])) {
         showInstructions = true;
@@ -970,11 +965,10 @@ bool isPlantOkayToWater() {
   int waterDetectionValue = analogRead(waterDetectionRead);
 
   moistureLevel = readSoilMoisture();
-  if (moistureLevel > 70) {
+  if (moistureLevel >= 70) {
     lcd.clear();
-    lcd.print("Soil already wet!");
-    lcd.setCursor(0, 1);
-    lcd.print(String("Moisture: ") + (int)moistureLevel + "%");
+    printMessage(0, 0, "Soil already wet!");
+    printMessage(0, 1, getMoistureValue());
     delay(3000);
     lcd.clear();
     return false;
@@ -982,9 +976,8 @@ bool isPlantOkayToWater() {
 
   if (waterDetectionValue > waterDetectThreshold) {
     lcd.clear();
-    lcd.print("WATER DETECTED!!");
-    lcd.setCursor(0, 1);
-    lcd.print("TRY AGAIN LATER");
+    printMessage(0, 0, "WATER DETECTED!!");
+    printMessage(0, 1, "TRY AGAIN LATER");
     delay(3000);
     lcd.clear();
     return false;
