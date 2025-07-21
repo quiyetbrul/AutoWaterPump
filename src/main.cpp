@@ -97,6 +97,12 @@ void waterCalibrationTest();
 void disableMessages();
 void autoWateringCheck();
 bool isPlantOkayToWater();
+void formatTime(int &hour, bool &isPM);
+void printTime(const int hour, const bool isPM);
+void printMoistureValue();
+void printAutoModeDate(RtcDateTime t);
+void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
+                   unsigned long minutesPart);
 
 void setup() {
   lcd.init();
@@ -124,35 +130,32 @@ void setup() {
 }
 
 void loop() {
-  bool waterLevelLow = isWaterDetected();
 
-  if (waterLevelLow) {
+  if (isWaterDetected()) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Water Lvl Low!");
     lcd.setCursor(0, 1);
     lcd.print("Please Add Water :)");
     delay(5000);
+  } else if (currentMenu == 0) {
+    showMessageCycle();
+    checkButtons();
   } else {
-    if (currentMenu == 0) {
-      showMessageCycle();
-      checkButtons();
-    } else {
-      handleMenu(currentMenu);
-      currentMenu = 0;
-    }
+    handleMenu(currentMenu);
+    currentMenu = 0;
   }
 }
 
 void displayStartup() {
   String title = "Water Pump Menu";
-  String loading = "    Loading....";
 
   lcd.setCursor(0, 0);
   lcd.print(title);
   lcd.setCursor(0, 1);
   lcd.blink();
 
+  String loading = "    Loading....";
   for (int i = 0; i < loading.length(); ++i) {
     lcd.print(loading.charAt(i));
     delay(bootAnimationDelay);
@@ -178,6 +181,83 @@ void showMessageCycle() {
   }
 }
 
+void formatTime(int &hour, bool &isPM) {
+  if (hour == 0) {
+    hour = 12;
+  } else if (hour >= 12) {
+    if (hour > 12)
+      hour -= 12;
+    isPM = true;
+  }
+}
+
+void printTime(const int hour, const bool isPM) {
+  lcd.setCursor(0, 0);
+  if (hour < 10)
+    lcd.print('0');
+  lcd.print(hour);
+  lcd.print(showColon ? ':' : ' ');
+  if (now.Minute() < 10)
+    lcd.print('0');
+  lcd.print(now.Minute());
+  lcd.print(isPM ? " PM" : " AM");
+}
+
+void printMoistureValue() {
+  int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
+  if (mP < 100)
+    lcd.print(' ');
+  if (mP < 10)
+    lcd.print(' ');
+  lcd.print(mP);
+  lcd.print('%');
+}
+
+void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
+                   unsigned long minutesPart) {
+  if (totalSecondsRemaining > 60) {
+    if (hoursPart < 10) {
+      lcd.print(" ");
+    }
+    lcd.print(hoursPart);
+    lcd.print("H");
+
+    if (minutesPart < 10) {
+      lcd.print("0");
+    }
+    lcd.print(minutesPart);
+    lcd.print("M");
+  } else {
+    lcd.setCursor(10, 1);
+    lcd.print(totalSecondsRemaining);
+    lcd.print(" Sec");
+  }
+}
+
+void printAutoModeDate(RtcDateTime t) {
+  if (t.Month() < 10)
+    lcd.print('0');
+  lcd.print(t.Month());
+  lcd.print('/');
+  if (t.Day() < 10)
+    lcd.print('0');
+  lcd.print(t.Day());
+  lcd.print('/');
+  lcd.print(t.Year());
+}
+
+void printManualModeDate(RtcDateTime t) {
+  if (t.Month() < 10)
+    lcd.print('0');
+  lcd.print(t.Month());
+  lcd.print('/');
+  if (t.Day() < 10)
+    lcd.print('0');
+  lcd.print(t.Day());
+  lcd.print('/');
+  lcd.print(t.Year());
+}
+
 void showMessageCycleClock() {
   unsigned long nowMs = millis();
 
@@ -190,44 +270,15 @@ void showMessageCycleClock() {
   RtcDateTime t = rtc.GetDateTime();
   bool isPM = false;
   int hour = now.Hour();
-  if (hour == 0) {
-    hour = 12;
-  } else if (hour >= 12) {
-    if (hour > 12)
-      hour -= 12;
-    isPM = true;
-  }
-
-  lcd.setCursor(0, 0);
-  if (hour < 10)
-    lcd.print('0');
-  lcd.print(hour);
-  lcd.print(showColon ? ':' : ' ');
-  if (now.Minute() < 10)
-    lcd.print('0');
-  lcd.print(now.Minute());
-  lcd.print(isPM ? " PM" : " AM");
+  formatTime(hour, isPM);
+  printTime(hour, isPM);
 
   lcd.setCursor(10, 0);
-  int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
-  if (mP < 100)
-    lcd.print(' ');
-  if (mP < 10)
-    lcd.print(' ');
-  lcd.print(mP);
-  lcd.print('%');
+  printMoistureValue();
 
   if (!isAutoModeEnabled) {
     lcd.setCursor(0, 1);
-    if (t.Month() < 10)
-      lcd.print('0');
-    lcd.print(t.Month());
-    lcd.print('/');
-    if (t.Day() < 10)
-      lcd.print('0');
-    lcd.print(t.Day());
-    lcd.print('/');
-    lcd.print(t.Year());
+    printManualModeDate(t);
   } else {
     lcd.setCursor(0, 1);
 
@@ -241,15 +292,7 @@ void showMessageCycleClock() {
 
     if (displayDateMessage) {
       lcd.setCursor(0, 1);
-      if (t.Month() < 10)
-        lcd.print('0');
-      lcd.print(t.Month());
-      lcd.print('/');
-      if (t.Day() < 10)
-        lcd.print('0');
-      lcd.print(t.Day());
-      lcd.print('/');
-      lcd.print(t.Year());
+      printAutoModeDate(t);
     } else {
       unsigned long elaspedTime = nowMs - autoTimer;
       unsigned long remainingTime = 0;
@@ -262,26 +305,8 @@ void showMessageCycleClock() {
       unsigned long totalSecondsRemaining = remainingTime / 1000;
       unsigned long hoursPart = totalSecondsRemaining / 3600UL;
       unsigned long minutesPart = (totalSecondsRemaining % 3600UL) / 60UL;
-
       lcd.print("Feeds in: ");
-
-      if (totalSecondsRemaining > 60) {
-        if (hoursPart < 10) {
-          lcd.print(" ");
-        }
-        lcd.print(hoursPart);
-        lcd.print("H");
-
-        if (minutesPart < 10) {
-          lcd.print("0");
-        }
-        lcd.print(minutesPart);
-        lcd.print("M");
-      } else {
-        lcd.setCursor(10, 1);
-        lcd.print(totalSecondsRemaining);
-        lcd.print(" Sec");
-      }
+      printNextFeed(totalSecondsRemaining, hoursPart, minutesPart);
     }
   }
 }
