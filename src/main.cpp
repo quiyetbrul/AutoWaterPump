@@ -384,41 +384,42 @@ void settingsMenu() {
 
     delay(inputDebounceDelay);
     while (true) {
-      if (isButtonPressed(buttonPins[0])) {
-        while (digitalRead(buttonPins[0]) == LOW)
-          ;
-        selected = (selected == 0) ? totalSettings - 1 : selected - 1;
-        break;
-      } else if (isButtonPressed(buttonPins[1])) {
-        while (digitalRead(buttonPins[1]) == LOW)
-          ;
-        selected = (selected + 1) % totalSettings;
-        break;
-      } else if (isButtonPressed(buttonPins[2])) {
-        while (digitalRead(buttonPins[2]) == LOW)
-          ;
+      // Check all buttons and handle appropriately
+      for (byte i = 0; i < totalButtons; i++) {
+        if (isButtonPressed(buttonPins[i])) {
+          while (digitalRead(buttonPins[i]) == LOW)
+            ; // Wait for release
 
-        switch (selected) {
-        case 0:
-          setDateTime();
-          break;
-        case 1:
-          waterCalibrationTest();
-          break;
-        case 2:
-          disableMessages();
-          break;
+          switch (i) {
+          case 0: // Previous option
+            selected = (selected == 0) ? totalSettings - 1 : selected - 1;
+            break;
+          case 1: // Next option
+            selected = (selected + 1) % totalSettings;
+            break;
+          case 2: // Select/Confirm
+            switch (selected) {
+            case 0:
+              setDateTime();
+              break;
+            case 1:
+              waterCalibrationTest();
+              break;
+            case 2:
+              disableMessages();
+              break;
+            }
+            return;
+          case 3: // Exit
+            lcd.clear();
+            printMessage(0, 0, "Please Wait ^_^ ");
+            delay(200);
+            printMessage(0, 1, "    Exiting");
+            delay(exitDelay);
+            return;
+          }
+          break; // Exit the for loop once a button is handled
         }
-        return;
-      } else if (isButtonPressed(buttonPins[3])) {
-        while (digitalRead(buttonPins[3]) == LOW)
-          ;
-        lcd.clear();
-        lcd.print("Please Wait ^_^ ");
-        delay(200);
-        printMessage(0, 1, "    Exiting");
-        delay(exitDelay);
-        return;
       }
     }
 
