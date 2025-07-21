@@ -617,88 +617,88 @@ void autoWatering() {
     printInstructions();
   }
 
-  enum SettingStep { SET_VALUE, SET_FREQUENCY, DONE };
-  SettingStep step = SET_VALUE;
-
   float targetCups = 1.0;
   float stepp = 0.5;
 
   if (oneCupCalibrated <= 0) {
     lcd.clear();
-    lcd.print("Calibration");
-    lcd.setCursor(0, 1);
-    lcd.print("Needed...");
+    printMessage(0, 0, "Calibration");
+    printMessage(0, 1, "Needed...");
     delay(1500);
     waterCalibrationTest();
-  }
-
-  if (oneCupCalibrated <= 0) {
     return;
   }
 
   delay(500);
 
+  enum SettingStep { SET_VALUE, SET_FREQUENCY, DONE };
+  SettingStep step = SET_VALUE;
+
   while (step != DONE) {
     lcd.clear();
+
     if (step == SET_VALUE) {
-      lcd.setCursor(0, 0);
-      lcd.print("How much water?");
-      lcd.setCursor(0, 1);
-      lcd.print("Cups: ");
+      printMessage(0, 0, "How much water?");
+      printMessage(0, 1, "Cups: ");
       lcd.print(targetCups, 1);
 
       while (true) {
-        if (isButtonPressed(buttonPins[0])) {
-          while (digitalRead(buttonPins[0]) == LOW)
+        // Handle increment/decrement
+        int direction = 0;
+        if (isButtonPressed(buttonPins[0]))
+          direction = -1;
+        if (isButtonPressed(buttonPins[1]))
+          direction = 1;
+
+        if (direction != 0) {
+          while (digitalRead(buttonPins[abs(direction)]) == LOW)
             ;
-          if (targetCups > stepp) {
-            targetCups -= stepp;
-          } else {
-            targetCups = 0.5;
-          }
+          targetCups = constrain(targetCups + (direction * stepp), 0.5, 10.0);
           break;
-        } else if (isButtonPressed(buttonPins[1])) {
-          while (digitalRead(buttonPins[1]) == LOW)
-            ;
-          targetCups += stepp;
-          break;
-        } else if (isButtonPressed(buttonPins[2])) {
+        }
+
+        if (isButtonPressed(buttonPins[2])) {
           autoWaterDurationMillis =
               (unsigned long)(targetCups * oneCupCalibrated);
           waterDuration = autoWaterDurationMillis;
-          lcd.clear();
-          lcd.print(waterDuration);
-          delay(2000);
           step = SET_FREQUENCY;
           break;
-        } else if (isButtonPressed(buttonPins[3])) {
+        }
+
+        if (isButtonPressed(buttonPins[3])) {
           printExitCurrentMenu();
           return;
         }
       }
       delay(50);
-    } else if (step == SET_FREQUENCY) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("How frequent?");
-      lcd.setCursor(0, 1);
+    }
 
-      lcd.print("Minutes: ");
-      lcd.print(waterIntervalHour / 60);
+    if (step == SET_FREQUENCY) {
+      printMessage(0, 0, "How frequent?");
+      printMessage(0, 1, "Minutes: " + waterIntervalHour / 60);
 
       while (true) {
-        if (isButtonPressed(buttonPins[0])) {
-          if (waterIntervalHour >= waterIntervalDelta)
-            waterIntervalHour -= waterIntervalDelta;
+        // Handle increment/decrement
+        int direction = 0;
+        if (isButtonPressed(buttonPins[0]))
+          direction = -1;
+        if (isButtonPressed(buttonPins[1]))
+          direction = 1;
+
+        if (direction != 0) {
+          unsigned long newInterval =
+              waterIntervalHour + (direction * waterIntervalDelta);
+          waterIntervalHour = constrain(newInterval, waterIntervalDelta, 1440);
           break;
-        } else if (isButtonPressed(buttonPins[1])) {
-          waterIntervalHour += waterIntervalDelta;
-          break;
-        } else if (isButtonPressed(buttonPins[2])) {
+        }
+
+        if (isButtonPressed(buttonPins[2])) {
           waterInterval = waterIntervalHour;
           step = DONE;
           break;
-        } else if (isButtonPressed(buttonPins[3])) {
+        }
+
+        if (isButtonPressed(buttonPins[3])) {
           printExitCurrentMenu();
           return;
         }
@@ -710,10 +710,9 @@ void autoWatering() {
   isAutoModeEnabled = true;
   autoTimer = 0;
   lcd.clear();
-  lcd.print("  [Auto Mode]");
-  lcd.setCursor(0, 1);
+  printMessage(0, 0, "  [Auto Mode]");
   delay(500);
-  lcd.print("  Enabled :)");
+  printMessage(0, 1, "  Enabled :)");
   delay(2000);
   autoTimer = millis();
 
@@ -766,30 +765,34 @@ void waterCalibrationTest() {
 
   while (step != DONE) {
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Water Duration");
+    printMessage(0, 0, "Water Duration");
     if (step == SET_DURATION) {
-      lcd.setCursor(0, 1);
-      lcd.print("(sec): ");
-      lcd.print(waterTestDuration / 1000);
+      printMessage(0, 1, "(sec): " + waterTestDuration / 1000);
     }
 
     while (true) {
-      if (isButtonPressed(buttonPins[0])) {
-        if (step == SET_DURATION && waterTestDuration >= 1000)
-          waterTestDuration -= 1000;
+      // Handle increment/decrement buttons
+      int direction = 0;
+      if (isButtonPressed(buttonPins[0]))
+        direction = -1;
+      if (isButtonPressed(buttonPins[1]))
+        direction = 1;
+
+      if (direction != 0 && step == SET_DURATION) {
+        waterTestDuration =
+            constrain(waterTestDuration + (direction * 1000), 1000, 60000);
         break;
-      } else if (isButtonPressed(buttonPins[1])) {
-        if (step == SET_DURATION)
-          waterTestDuration += 1000;
-        break;
-      } else if (isButtonPressed(buttonPins[2])) {
+      }
+
+      if (isButtonPressed(buttonPins[2])) {
         lcd.clear();
         lcd.print(waterTestDuration);
         delay(4000);
         step = static_cast<SettingStep>(step + 1);
         break;
-      } else if (isButtonPressed(buttonPins[3])) {
+      }
+
+      if (isButtonPressed(buttonPins[3])) {
         printExitCurrentMenu();
         return;
       }
@@ -802,30 +805,31 @@ void waterCalibrationTest() {
   while (!calibrationDone) {
     while (step != DONE) {
       lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Water Duration");
+      printMessage(0, 0, "Water Duration");
       if (step == SET_DURATION) {
-        lcd.setCursor(0, 1);
-        lcd.print("(sec): ");
-        lcd.print(waterTestDuration / 1000);
+        printMessage(0, 1, "(sec): " + String(waterTestDuration / 1000));
       }
 
       while (true) {
-        if (isButtonPressed(buttonPins[0])) {
-          if (step == SET_DURATION && waterTestDuration >= 1000)
-            waterTestDuration -= 1000;
+        // Handle increment/decrement buttons
+        int direction = 0;
+        if (isButtonPressed(buttonPins[0]))
+          direction = -1;
+        if (isButtonPressed(buttonPins[1]))
+          direction = 1;
+
+        if (direction != 0 && step == SET_DURATION) {
+          waterTestDuration =
+              constrain(waterTestDuration + (direction * 1000), 1000, 60000);
           break;
-        } else if (isButtonPressed(buttonPins[1])) {
-          if (step == SET_DURATION)
-            waterTestDuration += 1000;
-          break;
-        } else if (isButtonPressed(buttonPins[2])) {
-          lcd.clear();
-          lcd.print(waterTestDuration);
-          delay(4000);
+        }
+
+        if (isButtonPressed(buttonPins[2])) {
           step = static_cast<SettingStep>(step + 1);
           break;
-        } else if (isButtonPressed(buttonPins[3])) {
+        }
+
+        if (isButtonPressed(buttonPins[3])) {
           printExitCurrentMenu();
           return;
         }
@@ -833,24 +837,24 @@ void waterCalibrationTest() {
       delay(200);
     }
 
+    // Ask user to start calibration test
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Start Cal Test?");
-    lcd.setCursor(0, 1);
-    lcd.print("(-)=No (+)=Yes");
+    printMessage(0, 0, "Start Cal Test?");
+    printMessage(0, 1, "(-)=No (+)=Yes");
     delay(100);
 
     while (true) {
       if (isButtonPressed(buttonPins[0])) {
         printExitCurrentMenu();
         return;
-      } else if (isButtonPressed(buttonPins[1])) {
+      }
 
+      if (isButtonPressed(buttonPins[1])) {
+        // Run the water test
         if (isPlantOkayToWater()) {
           lcd.clear();
-          lcd.print("Dispensing..");
-          lcd.setCursor(0, 1);
-          lcd.print("Please Wait!");
+          printMessage(0, 0, "Dispensing..");
+          printMessage(0, 1, "Please Wait!");
           digitalWrite(pumpValvePin, HIGH);
           delay(pumpValveTiming);
           analogWrite(pumpPin, pumpHighSetting);
@@ -859,57 +863,48 @@ void waterCalibrationTest() {
           delay(pumpValveTiming);
           digitalWrite(pumpValvePin, LOW);
           lcd.clear();
-          lcd.print("Done!");
+          printMessage(0, 0, "Done!");
           delay(exitDelay);
-          lcd.clear();
         }
 
+        // Ask if output was 1 cup
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("1 cup output?");
-        lcd.setCursor(0, 1);
-        lcd.print("(-)=No (+)=Yes");
+        printMessage(0, 0, "1 cup output?");
+        printMessage(0, 1, "(-)=No (+)=Yes");
 
         while (true) {
           if (isButtonPressed(buttonPins[0])) {
-            while (digitalRead(buttonPins[0]) == LOW)
-              ;
+            // User says no - ask if they want to retry
             lcd.clear();
-            lcd.print("Retry test?");
-            lcd.setCursor(0, 1);
-            lcd.print("(-)=No (+)=Yes");
+            printMessage(0, 0, "Retry test?");
+            printMessage(0, 1, "(-)=No (+)=Yes");
 
             while (true) {
               if (isButtonPressed(buttonPins[0])) {
-                while (digitalRead(buttonPins[0]) == LOW)
-                  ;
                 printExitCurrentMenu();
-                delay(1000);
-                calibrationDone = true;
-                break;
-              } else if (isButtonPressed(buttonPins[1])) {
-                while (digitalRead(buttonPins[1]) == LOW)
-                  ;
-                step = SET_DURATION;
+                return;
+              }
+              if (isButtonPressed(buttonPins[1])) {
+                step = SET_DURATION; // Go back to duration setting
+                calibrationDone = false;
                 break;
               }
             }
             break;
-          } else if (isButtonPressed(buttonPins[1])) {
-            while (digitalRead(buttonPins[0]) == LOW)
-              ;
+          }
+
+          if (isButtonPressed(buttonPins[1])) {
+            // User says yes - save calibration
             oneCupCalibrated = waterTestDuration;
             lcd.clear();
-            lcd.print("1Cup Calibration");
-            lcd.setCursor(0, 1);
+            printMessage(0, 0, "1Cup Calibration");
             delay(500);
-            lcd.print("    Saved!");
+            printMessage(0, 1, "    Saved!");
             delay(2000);
             lcd.clear();
-            lcd.print(oneCupCalibrated);
+            printMessage(0, 0, String(oneCupCalibrated));
             delay(4000);
-            calibrationDone = true;
-            break;
+            return;
           }
         }
         break;
