@@ -205,7 +205,7 @@ bool isPlantOkayToWater();
 // ========================================
 // DISPLAY & UI UTILITY
 // ========================================
-void printMessage(int x, int y, const char *message);
+void printMessage(int x, int y, const String &message);
 void printAnimation(String message);
 void printExitCurrentMenu();
 void printInstructions();
@@ -268,7 +268,6 @@ void loop() {
   if (isWaterDetected()) {
     lcd.clear();
     printMessage(0, 0, "Water Lvl Low!");
-    lcd.setCursor(0, 1);
     printMessage(0, 1, "Please add water");
     delay(5000);
   } else if (currentMenu == 0) {
@@ -285,8 +284,7 @@ void loop() {
  * @details Shows "Water Pump Menu" title followed by animated loading text
  */
 void displayStartup() {
-  String title = "Water Pump Menu";
-  printMessage(0, 0, title);
+  printMessage(0, 0, "Water Pump Menu");
   printAnimation("    Loading....");
   delay(bootWait);
 }
@@ -856,6 +854,8 @@ void setDateTime() {
       case SET_MINUTE:
         minute = constrain(minute + direction, 0, 59);
         break;
+      case DONE:
+        break;
       }
       buttonHandled = true;
       lastStep = DONE; // Force display update
@@ -1192,20 +1192,12 @@ void printMessage(int x, int y, const String &message) {
 void printAnimation(String message) {
   lcd.setCursor(0, 1);
   lcd.blink();
-  for (int i = 0; i < message.length(); ++i) {
+  for (unsigned int i = 0; i < message.length(); ++i) {
     lcd.print(message.charAt(i));
     delay(bootAnimationDelay);
   }
   lcd.noBlink();
   lcd.clear();
-}
-
-void printExitCurrentMenu() {
-  lcd.clear();
-  printMessage(0, 0, "Please Wait ^_^ ");
-  delay(200);
-  printMessage(0, 1, "    Exiting");
-  delay(exitDelay);
 }
 
 /**
@@ -1268,8 +1260,6 @@ void formatTime(int &hour, bool &isPM) {
  */
 String getMoistureValue() {
   unsigned char mP = calculateMoisture(lastRawMoistureValue);
-  // Ensure within valid range (constrain returns int, so we cast back)
-  mP = (unsigned char)constrain(mP, 0, 100);
 
   char buffer[5]; // " 99%\0"
   if (mP < 10) {
