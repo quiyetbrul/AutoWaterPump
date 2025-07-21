@@ -3,8 +3,6 @@
 #include <RtcDS1302.h>
 #include <Wire.h>
 
-#include <string.h>
-
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 const byte CLK = 7;
@@ -102,10 +100,11 @@ bool isPlantOkayToWater();
 void formatTime(int &hour, bool &isPM);
 void printTime(const int hour, const bool isPM);
 void printMoistureValue();
-void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
+void printMessage(int x, int y, const String &message);
+String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
                    unsigned long minutesPart);
-void printMessage(int x, int y, const std::string &message);
-std::string getDate();
+String getDate();
+String getTime(const int hour, const bool isPM);
 
 void setup() {
   lcd.init();
@@ -201,27 +200,29 @@ void printMoistureValue() {
   lcd.print('%');
 }
 
-void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
-                   unsigned long minutesPart) {
-  if (totalSecondsRemaining > 60) {
-    if (hoursPart < 10) {
-      lcd.print(" ");
-    }
-    lcd.print(hoursPart);
-    lcd.print("H");
-
-    if (minutesPart < 10) {
-      lcd.print("0");
-    }
-    lcd.print(minutesPart);
-    lcd.print("M");
-  } else {
-    printMessage(10, 1, totalSecondsRemaining + " Sec")
+String getNextFeed(const unsigned long totalSecondsRemaining,
+                   const unsigned long hoursPart,
+                   const unsigned long minutesPart) {
+  String nextFeed = totalSecondsRemaining;
+  if (totalSecondsRemaining < 60) {
+    return nextFeed + " Sec";
   }
+
+  if (hoursPart < 10) {
+    nextFeed += " "
+  }
+  nextFeed += hoursPart + "H";
+
+  if (minutesPart < 10) {
+    nextFeed += "0";
+  }
+  nextFeed += minutesPart + "M";
+
+  return nextFeed;
 }
 
-std::string getTime(const int hour, const bool isPM) {
-  std::string time = hour < 10 ? "0" + hour : hour;
+String getTime(const int hour, const bool isPM) {
+  String time = hour < 10 ? "0" + hour : hour;
   time += showColon ? ':' : ' ';
   time += now.Minute() < 10 ? "0" + now.Minute() : now.Minute();
   time += " " + isPM ? "PM" : "AM";
@@ -229,9 +230,9 @@ std::string getTime(const int hour, const bool isPM) {
   return time;
 }
 
-std::string getDate() {
+String getDate() {
   RtcDateTime t = rtc.GetDateTime();
-  std::string date = "";
+  String date = "";
   if (t.Month() < 10)
     date += "0";
   date += t.Month();
@@ -245,7 +246,7 @@ std::string getDate() {
   return date;
 }
 
-void printMessage(int x, int y, const std::string &message) {
+void printMessage(int x, int y, const String &message) {
   lcd.setCursor(x, y);
   lcd.print(message);
 }
@@ -262,15 +263,13 @@ void showMessageCycleClock() {
   int hour = now.Hour();
   bool isPM = false;
   formatTime(hour, isPM);
-  std::string time = getTime(hour, isPM);
-  printMessage(0, 0, time);
+  printMessage(0, 0, getTime(hour, isPM));
 
   lcd.setCursor(10, 0);
   printMoistureValue();
 
   if (!isAutoModeEnabled) {
-    std::string date = getDate();
-    printMessage(0, 1, date)
+    printMessage(0, 1, getDate())
 
   } else {
     if (millis() - lastMessageSwitch >= dateAndCountDownDelay) {
@@ -280,8 +279,7 @@ void showMessageCycleClock() {
     }
 
     if (displayDateMessage) {
-      std::string date = getDate();
-      printMessage(0, 1, date)
+      printMessage(0, 1, getDate())
     } else {
       unsigned long elaspedTime = nowMs - autoTimer;
       unsigned long remainingTime = 0;
@@ -295,7 +293,8 @@ void showMessageCycleClock() {
       unsigned long hoursPart = totalSecondsRemaining / 3600UL;
       unsigned long minutesPart = (totalSecondsRemaining % 3600UL) / 60UL;
       printMessage(0, 1, "Feeds in: ");
-      printNextFeed(totalSecondsRemaining, hoursPart, minutesPart);
+      printMessage(10, 1,
+                   getNextFeed(totalSecondsRemaining, hoursPart, minutesPart));
     }
   }
 }
