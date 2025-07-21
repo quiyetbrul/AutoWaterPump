@@ -103,6 +103,7 @@ void printInstructions();
 void printTime(const int hour, const bool isPM);
 void printMessage(int x, int y, const String &message);
 void printAnimation(String message);
+void printExitCurrentMenu();
 
 String getMoistureValue();
 String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
@@ -270,6 +271,14 @@ void printMessage(int x, int y, const String &message) {
   lcd.print(message);
 }
 
+void printExitCurrentMenu() {
+  lcd.clear();
+  printMessage(0, 0, "Please Wait ^_^ ");
+  delay(200);
+  printMessage(0, 1, "    Exiting");
+  delay(exitDelay);
+}
+
 void showMessageCycleClock() {
   unsigned long nowMs = millis();
 
@@ -411,11 +420,7 @@ void settingsMenu() {
             }
             return;
           case 3: // Exit
-            lcd.clear();
-            printMessage(0, 0, "Please Wait ^_^ ");
-            delay(200);
-            printMessage(0, 1, "    Exiting");
-            delay(exitDelay);
+            printExitCurrentMenu();
             return;
           }
           break; // Exit the for loop once a button is handled
@@ -442,39 +447,29 @@ void showClock() {
     showMessageCycleClock();
     autoWateringCheck();
 
-    if (digitalRead(buttonPins[2]) == LOW) {
-      delay(inputDebounceDelay);
-      if (digitalRead(buttonPins[2]) == LOW) {
-        lcd.clear();
-        printMessage(0, 0, "Moisture Lvl:");
-        printAnimation(moistureCheck);
+    if (isButtonPressed(buttonPins[2])) {
+      lcd.clear();
+      printMessage(0, 0, "Moisture Lvl:");
+      printAnimation(moistureCheck);
 
-        readSoilMoisture();
-        delay(messageDisplayDuration);
+      readSoilMoisture();
+      delay(messageDisplayDuration);
+      lcd.clear();
+      printMessage(0, 0, "      Done     ");
+      lcd.clear();
+    }
+    if (isButtonPressed(buttonPins[3])) {
+      if (isAutoModeEnabled) {
         lcd.clear();
-        printMessage(0, 0, "      Done     ");
-        lcd.clear();
-      }
-    } else if (digitalRead(buttonPins[3]) == LOW) {
-      delay(inputDebounceDelay);
-      if (digitalRead(buttonPins[3]) == LOW) {
-        if (isAutoModeEnabled) {
-          lcd.clear();
-          lcd.print("  [Auto Mode]");
-          lcd.setCursor(0, 1);
-          delay(500);
-          lcd.print("  Disabled :(");
-          isAutoModeEnabled = false;
-          delay(2000);
-        }
-        lcd.clear();
-        lcd.print("Please Wait ^_^ ");
+        lcd.print("  [Auto Mode]");
         lcd.setCursor(0, 1);
-        delay(200);
-        lcd.print("    Exiting");
-        delay(exitDelay);
-        return;
+        delay(500);
+        lcd.print("  Disabled :(");
+        isAutoModeEnabled = false;
+        delay(2000);
       }
+      printExitCurrentMenu();
+      return;
     }
     delay(inputDebounceDelay);
   }
@@ -518,11 +513,7 @@ void setDateTime() {
     while (true) {
       // finished setting date and time
       if (isButtonPressed(buttonPins[3])) {
-        lcd.clear();
-        printMessage(0, 0, "Please Wait ^_^ ");
-        delay(200);
-        printMessage(0, 1, "    Exiting");
-        delay(exitDelay);
+        printExitCurrentMenu();
         return;
       }
 
@@ -628,13 +619,7 @@ void manualWatering() {
           analogWrite(pumpPin, 0);
           digitalWrite(pumpValvePin, LOW);
         }
-
-        lcd.clear();
-        lcd.print("Please Wait ^_^ ");
-        lcd.setCursor(0, 1);
-        delay(200);
-        lcd.print("    Exiting");
-        delay(exitDelay);
+        printExitCurrentMenu();
         return;
       }
 
@@ -715,12 +700,7 @@ void autoWatering() {
           step = SET_FREQUENCY;
           break;
         } else if (isButtonPressed(buttonPins[3])) {
-          lcd.clear();
-          lcd.print("Please Wait ^_^ ");
-          lcd.setCursor(0, 1);
-          delay(200);
-          lcd.print("    Exiting");
-          delay(exitDelay);
+          printExitCurrentMenu();
           return;
         }
       }
@@ -747,12 +727,7 @@ void autoWatering() {
           step = DONE;
           break;
         } else if (isButtonPressed(buttonPins[3])) {
-          lcd.clear();
-          lcd.print("Please Wait ^_^ ");
-          lcd.setCursor(0, 1);
-          delay(200);
-          lcd.print("    Exiting");
-          delay(exitDelay);
+          printExitCurrentMenu();
           return;
         }
       }
@@ -847,12 +822,7 @@ void waterCalibrationTest() {
         step = static_cast<SettingStep>(step + 1);
         break;
       } else if (isButtonPressed(buttonPins[3])) {
-        lcd.clear();
-        lcd.print("Please Wait ^_^ ");
-        lcd.setCursor(0, 1);
-        delay(200);
-        lcd.print("    Exiting");
-        delay(exitDelay);
+        printExitCurrentMenu();
         return;
       }
     }
@@ -888,12 +858,7 @@ void waterCalibrationTest() {
           step = static_cast<SettingStep>(step + 1);
           break;
         } else if (isButtonPressed(buttonPins[3])) {
-          lcd.clear();
-          lcd.print("Please Wait ^_^ ");
-          lcd.setCursor(0, 1);
-          delay(200);
-          lcd.print("    Exiting");
-          delay(exitDelay);
+          printExitCurrentMenu();
           return;
         }
       }
@@ -909,12 +874,7 @@ void waterCalibrationTest() {
 
     while (true) {
       if (isButtonPressed(buttonPins[0])) {
-        lcd.clear();
-        lcd.print("Please Wait ^_^ ");
-        lcd.setCursor(0, 1);
-        delay(200);
-        lcd.print("    Exiting");
-        delay(exitDelay);
+        printExitCurrentMenu();
         return;
       } else if (isButtonPressed(buttonPins[1])) {
 
@@ -955,12 +915,7 @@ void waterCalibrationTest() {
               if (isButtonPressed(buttonPins[0])) {
                 while (digitalRead(buttonPins[0]) == LOW)
                   ;
-                lcd.clear();
-                lcd.print("Please Wait ^_^ ");
-                lcd.setCursor(0, 1);
-                delay(200);
-                lcd.print("    Exiting");
-                delay(exitDelay);
+                printExitCurrentMenu();
                 delay(1000);
                 calibrationDone = true;
                 break;
