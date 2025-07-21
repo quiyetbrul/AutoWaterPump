@@ -451,23 +451,24 @@ void showClock() {
       lcd.clear();
       printMessage(0, 0, "Moisture Lvl:");
       printAnimation("  Measuring...  ");
-      printMessage(0, 1, readSoilMoisture() + "%");
+      readSoilMoisture();
+      printMessage(0, 1, getMoistureValue());
       delay(messageDisplayDuration);
       lcd.clear();
       printMessage(0, 0, "      Done     ");
       lcd.clear();
     }
     if (isButtonPressed(buttonPins[3])) {
-      if (isAutoModeEnabled) {
-        lcd.clear();
-        printMessage(0, 0, "  [Auto Mode]");
-        delay(500);
-        printMessage(0, 1, "  Disabled :(");
-        isAutoModeEnabled = false;
-        delay(2000);
+      if (!isAutoModeEnabled) {
+        printExitCurrentMenu();
+        return;
       }
-      printExitCurrentMenu();
-      return;
+      lcd.clear();
+      printMessage(0, 0, "  [Auto Mode]");
+      delay(500);
+      printMessage(0, 1, "  Disabled :(");
+      isAutoModeEnabled = false;
+      delay(2000);
     }
     delay(inputDebounceDelay);
   }
@@ -563,32 +564,15 @@ void setDateTime() {
 
 void manualWatering() {
   if (showInstructions) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Use buttons to:");
-    lcd.setCursor(0, 1);
-    lcd.print("-/+ to change");
-    delay(transitionDelay);
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("M: Confirm/Next");
-    lcd.setCursor(0, 1);
-    lcd.print("A: Exit");
-    delay(transitionDelay);
+    printInstructions();
   }
 
   delay(500);
 
   while (isPlantOkayToWater()) {
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.write(byte(243));
-    lcd.print(" Manual Water ");
-    lcd.write(byte(243));
-
-    lcd.setCursor(0, 1);
-    lcd.print("(M)Hold (A):Esc ");
+    printMessage(0, 0, " Manual Water ");
+    printMessage(0, 1, "(M)Hold (A):Esc ");
 
     bool currentlyWatering = false;
 
@@ -596,23 +580,25 @@ void manualWatering() {
       delay(inputDebounceDelay);
       bool isMHeld = (digitalRead(buttonPins[2]) == LOW);
 
+      // Handle pump state changes
       if (isMHeld != currentlyWatering) {
         currentlyWatering = isMHeld;
 
-        lcd.setCursor(0, 1);
-
+        // Control pump based on current state
         if (currentlyWatering && isPlantOkayToWater()) {
-          lcd.print("  Watering...   ");
+          printMessage(0, 1, "  Watering...   ");
           digitalWrite(pumpValvePin, HIGH);
           analogWrite(pumpPin, pumpHighSetting);
         } else {
-          lcd.print("(M)Hold (A):Esc ");
+          printMessage(0, 1, "(M)Hold (A):Esc ");
           analogWrite(pumpPin, 0);
           digitalWrite(pumpValvePin, LOW);
         }
       }
 
+      // Handle exit button
       if (isButtonPressed(buttonPins[3])) {
+        // Stop pump if currently watering
         if (currentlyWatering) {
           analogWrite(pumpPin, 0);
           digitalWrite(pumpValvePin, LOW);
@@ -628,19 +614,7 @@ void manualWatering() {
 
 void autoWatering() {
   if (showInstructions) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Use buttons to:");
-    lcd.setCursor(0, 1);
-    lcd.print("-/+ to change");
-    delay(transitionDelay);
-
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("M: Confirm/Next");
-    lcd.setCursor(0, 1);
-    lcd.print("A: Exit");
-    delay(transitionDelay);
+    printInstructions();
   }
 
   enum SettingStep { SET_VALUE, SET_FREQUENCY, DONE };
@@ -971,18 +945,11 @@ void disableMessages() {
       delay(inputDebounceDelay);
       if (isButtonPressed(buttonPins[1])) {
         showInstructions = true;
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Use buttons to:");
-        lcd.setCursor(0, 1);
-        lcd.print("-/+ to change");
-        delay(transitionDelay);
+        printInstructions();
 
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("M: Confirm/Next");
-        lcd.setCursor(0, 1);
-        lcd.print("A: Cancel");
+        printMessage(0, 0, "M: Confirm/Next");
+        printMessage(0, 1, "A: Cancel");
         delay(transitionDelay);
         return;
       }
