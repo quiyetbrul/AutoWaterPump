@@ -57,10 +57,12 @@ const byte totalButtons = sizeof(buttonPins) / sizeof(buttonPins[0]);
  * @brief Analog and digital pins for moisture and water sensors
  * @{
  */
-const int pinSoilPower = 11;        ///< Power pin for soil moisture sensor
-const int pinSoilRead = A2;         ///< Analog read pin for soil moisture
-const int waterDetectionRead = A3;  ///< Analog read pin for water detection
-const int waterDetectionPower = 13; ///< Power pin for water detection sensor
+const unsigned char pinSoilPower = 11; ///< Power pin for soil moisture sensor
+const unsigned char pinSoilRead = A2;  ///< Analog read pin for soil moisture
+const unsigned char waterDetectionRead =
+    A3; ///< Analog read pin for water detection
+const unsigned char waterDetectionPower =
+    13; ///< Power pin for water detection sensor
 /** @} */
 
 /**
@@ -68,10 +70,11 @@ const int waterDetectionPower = 13; ///< Power pin for water detection sensor
  * @brief Calibration values and thresholds for sensor readings
  * @{
  */
-const int waterSensorPin = 12;        ///< Digital pin for water level sensor
-const int DRY_VALUE = 300;            ///< Raw ADC value for completely dry soil
-const int WET_VALUE = 880;            ///< Raw ADC value for completely wet soil
-const int waterDetectThreshold = 350; ///< Threshold for water detection sensor
+const unsigned char waterSensorPin = 12; ///< Digital pin for water level sensor
+const unsigned int DRY_VALUE = 300; ///< Raw ADC value for completely dry soil
+const unsigned int WET_VALUE = 880; ///< Raw ADC value for completely wet soil
+const unsigned int waterDetectThreshold =
+    350; ///< Threshold for water detection sensor
 unsigned long lastRawMoistureValue = 0; ///< Last raw moisture reading cache
 /** @} */
 
@@ -80,10 +83,10 @@ unsigned long lastRawMoistureValue = 0; ///< Last raw moisture reading cache
  * @brief Water pump control pins and timing parameters
  * @{
  */
-const int pumpValvePin = 9;       ///< Digital pin controlling water valve
-const int pumpPin = 10;           ///< PWM pin controlling pump speed
-const int pumpValveTiming = 2000; ///< Valve operation delay (ms)
-const int pumpHighSetting = 255;  ///< Full speed PWM value for pump
+const unsigned char pumpValvePin = 9; ///< Digital pin controlling water valve
+const unsigned char pumpPin = 10;     ///< PWM pin controlling pump speed
+const unsigned int pumpValveTiming = 2000; ///< Valve operation delay (ms)
+const unsigned char pumpHighSetting = 255; ///< Full speed PWM value for pump
 /** @} */
 
 /**
@@ -91,9 +94,9 @@ const int pumpHighSetting = 255;  ///< Full speed PWM value for pump
  * @brief Runtime variables for automatic watering control
  * @{
  */
-unsigned long waterInterval = 0;       ///< Time between waterings (minutes)
-unsigned long waterIntervalHour = 60;  ///< Default watering interval (minutes)
-unsigned long waterIntervalDelta = 60; ///< Increment step for interval setting
+unsigned int waterInterval = 0;        ///< Time between waterings (minutes)
+unsigned int waterIntervalHour = 60;   ///< Default watering interval (minutes)
+unsigned int waterIntervalDelta = 60;  ///< Increment step for interval setting
 unsigned long waterDuration = 20000UL; ///< Duration of watering cycle (ms)
 float moistureLevel = 0.0;             ///< Current soil moisture percentage
 unsigned long oneCupCalibrated = 0; ///< Calibrated time for 1 cup of water (ms)
@@ -106,17 +109,17 @@ unsigned long autoWaterDurationMillis =
  * @brief Various timing delays and intervals for UI and system operation
  * @{
  */
-const unsigned long messageDisplayDuration =
+const unsigned int messageDisplayDuration =
     3000; ///< Main menu message display time
-const unsigned long dateAndCountDownDelay =
+const unsigned int dateAndCountDownDelay =
     6000;                                    ///< Clock display toggle interval
-const unsigned long inputDebounceDelay = 25; ///< Button debounce delay
-const unsigned long bootAnimationDelay = 50; ///< Boot animation character delay
-const unsigned long bootWait = 3500;         ///< Initial boot wait time
-const unsigned long transitionDelay = 2000;  ///< Menu transition delay
-const unsigned long exitDelay = 1000;        ///< Exit message display time
-const unsigned long sensorWarmTime = 200;    ///< Sensor stabilization time
-const unsigned long blinkInterval = 500;     ///< Clock colon blink interval
+const unsigned char inputDebounceDelay = 25; ///< Button debounce delay
+const unsigned char bootAnimationDelay = 50; ///< Boot animation character delay
+const unsigned int bootWait = 3500;          ///< Initial boot wait time
+const unsigned int transitionDelay = 2000;   ///< Menu transition delay
+const unsigned int exitDelay = 1000;         ///< Exit message display time
+const unsigned char sensorWarmTime = 200;    ///< Sensor stabilization time
+const unsigned int blinkInterval = 500;      ///< Clock colon blink interval
 /** @} */
 
 /**
@@ -124,10 +127,9 @@ const unsigned long blinkInterval = 500;     ///< Clock colon blink interval
  * @brief Variables for button debouncing and state tracking
  * @{
  */
-unsigned long lastTimeButtonStateChanged =
-    millis();                         ///< Last button state change time
-unsigned long debounceDuration = 100; ///< Button debounce duration
-byte lastButtonState;                 ///< Previous button state
+unsigned long lastTimeButtonStateChanged = 0; ///< Last button state change time
+unsigned char debounceDuration = 100;         ///< Button debounce duration
+unsigned char lastButtonState;                ///< Previous button state
 /** @} */
 
 /**
@@ -138,8 +140,8 @@ byte lastButtonState;                 ///< Previous button state
 bool isAutoModeEnabled = false; ///< Flag indicating if auto watering is active
 bool showInstructions = false;  ///< Flag to show/hide instruction messages
 bool displayDateMessage = true; ///< Toggle between date and countdown display
-byte currentMenu = 0;           ///< Current active menu (0 = main menu)
-byte messageIndex = 0;          ///< Index for cycling main menu messages
+unsigned char currentMenu = 0;  ///< Current active menu (0 = main menu)
+unsigned char messageIndex = 0; ///< Index for cycling main menu messages
 unsigned long lastMessageSwitch = 0; ///< Last time main menu message switched
 static bool showColon = true;        ///< Clock colon visibility toggle
 unsigned long lastBlink = 0;         ///< Last colon blink time
@@ -156,7 +158,7 @@ String messagesHomeScreen[] = {
     "(M) Manual Mode ",
     "(A) Auto Mode   ",
 };
-const byte totalMessages =
+const unsigned char totalMessages =
     sizeof(messagesHomeScreen) / sizeof(messagesHomeScreen[0]);
 
 // ========================================
@@ -171,8 +173,8 @@ void setup();
 // ========================================
 void showMessageCycle();
 void checkButtons();
-void handleMenu(byte menu);
-bool isButtonPressed(byte pin);
+void handleMenu(unsigned char menu);
+bool isButtonPressed(unsigned char pin);
 
 // ========================================
 // PRIMARY FEATURE
@@ -196,14 +198,14 @@ void disableMessages();
 // SENSOR & HARDWARE
 // ========================================
 float readSoilMoisture();
-int calculateMoisture(int raw);
+unsigned char calculateMoisture(unsigned int raw);
 bool isWaterDetected();
 bool isPlantOkayToWater();
 
 // ========================================
 // DISPLAY & UI UTILITY
 // ========================================
-void printMessage(int x, int y, const String &message);
+void printMessage(int x, int y, const char *message);
 void printAnimation(String message);
 void printExitCurrentMenu();
 void printInstructions();
@@ -235,7 +237,7 @@ void setup() {
   printMessage(0, 1, "Quiyet Brul");
   delay(4000);
 
-  for (byte i = 0; i < totalButtons; ++i) {
+  for (unsigned char i = 0; i < totalButtons; ++i) {
     pinMode(buttonPins[i], INPUT_PULLUP);
   }
 
@@ -321,7 +323,7 @@ void checkButtons() {
     return; // Check every 10ms
   lastCheck = now;
 
-  for (byte i = 0; i < totalButtons; ++i) {
+  for (unsigned char i = 0; i < totalButtons; ++i) {
     if (isButtonPressed(buttonPins[i])) {
       currentMenu = i + 1;
       break;
@@ -335,7 +337,7 @@ void checkButtons() {
  * @details Clears display, calls the selected menu function, then resets to
  * main menu
  */
-void handleMenu(byte menu) {
+void handleMenu(unsigned char menu) {
   lcd.clear();
 
   switch (menu) {
@@ -366,7 +368,7 @@ void handleMenu(byte menu) {
  * @details Implements software debouncing with 100ms duration to prevent
  * false triggers from mechanical button bounce
  */
-bool isButtonPressed(byte pin) {
+bool isButtonPressed(unsigned char pin) {
   if (millis() - lastTimeButtonStateChanged >= debounceDuration) {
     byte buttonState = digitalRead(pin);
     if (buttonState != lastButtonState) {
@@ -627,7 +629,7 @@ void autoWatering() {
           direction = 1;
 
         if (direction != 0) {
-          unsigned long newInterval =
+          unsigned int newInterval =
               waterIntervalHour + (direction * waterIntervalDelta);
           waterIntervalHour = constrain(newInterval, waterIntervalDelta, 1440);
           break;
@@ -713,9 +715,9 @@ void settingsMenu() {
     printInstructions();
   }
 
-  const byte totalSettings = 3;
-  byte selected = 0;
-  byte lastSelected = 255; // Force initial display
+  const unsigned char totalSettings = 3;
+  unsigned char selected = 0;
+  unsigned char lastSelected = 255; // Force initial display
 
   String options[totalSettings] = {"1.Set Time/Date", "2.Calibrate Test",
                                    "3.Disable Msgs"};
@@ -732,7 +734,7 @@ void settingsMenu() {
     delay(inputDebounceDelay);
 
     // Check all buttons and handle appropriately
-    for (byte i = 0; i < totalButtons; i++) {
+    for (unsigned char i = 0; i < totalButtons; i++) {
       if (isButtonPressed(buttonPins[i])) {
         while (digitalRead(buttonPins[i]) == LOW)
           ; // Wait for release
@@ -1115,7 +1117,7 @@ float readSoilMoisture() {
  * @return Moisture percentage (0-100)
  * @details Maps sensor reading between dry and wet calibration values
  */
-int calculateMoisture(int raw) {
+unsigned char calculateMoisture(unsigned int raw) {
   if (raw <= DRY_VALUE)
     return 0;
   if (raw >= WET_VALUE)
@@ -1142,7 +1144,7 @@ bool isWaterDetected() { return digitalRead(waterSensorPin) == HIGH; }
 bool isPlantOkayToWater() {
   digitalWrite(waterDetectionPower, HIGH);
   delay(sensorWarmTime);
-  int waterDetectionValue = analogRead(waterDetectionRead);
+  unsigned int waterDetectionValue = analogRead(waterDetectionRead);
 
   moistureLevel = readSoilMoisture();
   if (moistureLevel >= 70) {
@@ -1265,8 +1267,9 @@ void formatTime(int &hour, bool &isPM) {
  * - Returns as String for easy LCD display
  */
 String getMoistureValue() {
-  int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
-  mP = constrain(mP, 0, 100); // Ensure within valid range
+  unsigned char mP = calculateMoisture(lastRawMoistureValue);
+  // Ensure within valid range (constrain returns int, so we cast back)
+  mP = (unsigned char)constrain(mP, 0, 100);
 
   char buffer[5]; // " 99%\0"
   if (mP < 10) {
