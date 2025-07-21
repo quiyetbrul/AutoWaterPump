@@ -102,11 +102,6 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
-  lcd.print("  Created by:   ");
-  lcd.setCursor(0, 1);
-  lcd.print("  [Aqua");
-  lcd.write(243);
-  lcd.print("Works]");
   delay(4000);
 
   for (byte i = 0; i < totalButtons; ++i) {
