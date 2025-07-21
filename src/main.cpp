@@ -190,64 +190,48 @@ String getMoistureValue() {
   int mP = int(calculateMoisture(lastRawMoistureValue) + 0.5);
   mP = constrain(mP, 0, 100); // Ensure within valid range
 
-  String moistureValue = "";
+  char buffer[5]; // " 99%\0"
   if (mP < 10) {
-    moistureValue += "  "; // Two spaces for single digit
+    sprintf(buffer, "  %d%%", mP);
   } else {
-    moistureValue += " "; // One space for double digit
+    sprintf(buffer, " %d%%", mP);
   }
 
-  moistureValue += String(mP) + "%";
-  return moistureValue;
+  return String(buffer);
 }
 
 String getNextFeed(const unsigned long totalSecondsRemaining,
                    const unsigned long hoursPart,
                    const unsigned long minutesPart) {
-  String nextFeed = String(totalSecondsRemaining);
   if (totalSecondsRemaining < 60) {
-    return nextFeed + " Sec";
+    char buffer[7]; // "999 Sec\0"
+    sprintf(buffer, "%lu Sec", totalSecondsRemaining);
+    return String(buffer);
   }
 
-  nextFeed = "";
+  char buffer[8]; // " 99H99M\0"
   if (hoursPart < 10) {
-    nextFeed += " ";
+    sprintf(buffer, " %luH%02luM", hoursPart, minutesPart);
+  } else {
+    sprintf(buffer, "%luH%02luM", hoursPart, minutesPart);
   }
-  nextFeed += String(hoursPart) + "H";
 
-  if (minutesPart < 10) {
-    nextFeed += "0";
-  }
-  nextFeed += String(minutesPart) + "M";
-
-  return nextFeed;
+  return String(buffer);
 }
 
 String getTime(const int hour, const bool isPM) {
   RtcDateTime now = rtc.GetDateTime();
-  String time = hour < 10 ? "0" + String(hour) : String(hour);
-  time += showColon ? ':' : ' ';
-  time += now.Minute() < 10 ? "0" + String(now.Minute()) : String(now.Minute());
-  time += " ";
-  time += isPM ? "PM" : "AM";
-
-  return time;
+  char buffer[9]; // "99:99 PM\0"
+  char separator = showColon ? ':' : ' ';
+  sprintf(buffer, "%02d%c%02d %s", hour, separator, now.Minute(), isPM ? "PM" : "AM");
+  return String(buffer);
 }
 
 String getDate() {
   RtcDateTime t = rtc.GetDateTime();
-  String date = "";
-  if (t.Month() < 10)
-    date += "0";
-  date += t.Month();
-  date += "/";
-  if (t.Day() < 10)
-    date += "0";
-  date += t.Day();
-  date += "/";
-  date += t.Year();
-
-  return date;
+  char buffer[11]; // "99/99/9999\0"
+  sprintf(buffer, "%02d/%02d/%04d", t.Month(), t.Day(), t.Year());
+  return String(buffer);
 }
 
 void printInstructions() {
@@ -288,8 +272,6 @@ void showMessageCycleClock() {
   bool isPM = false;
   formatTime(hour, isPM);
   printMessage(0, 0, getTime(hour, isPM));
-
-  lcd.setCursor(10, 0);
   printMessage(10, 0, getMoistureValue());
 
   if (!isAutoModeEnabled) {
@@ -325,6 +307,13 @@ void showMessageCycleClock() {
 }
 
 void checkButtons() {
+  static unsigned long lastCheck = 0;
+  unsigned long now = millis();
+
+  // Throttle button checking to reduce CPU usage
+  if (now - lastCheck < 10) return; // Check every 10ms
+  lastCheck = now;
+
   for (byte i = 0; i < totalButtons; ++i) {
     if (isButtonPressed(buttonPins[i])) {
       currentMenu = i + 1;
@@ -378,49 +367,53 @@ void settingsMenu() {
 
   const byte totalSettings = 3;
   byte selected = 0;
+  byte lastSelected = 255; // Force initial display
 
   String options[totalSettings] = {"1.Set Time/Date", "2.Calibrate Test",
                                    "3.Disable Msgs"};
 
   while (true) {
-    lcd.clear();
-    printMessage(0, 0, "Select Option:");
-    printMessage(0, 1, options[selected]);
+    // Only update display when selection changes
+    if (selected != lastSelected) {
+      lcd.clear();
+      printMessage(0, 0, "Select Option:");
+      printMessage(0, 1, options[selected]);
+      lastSelected = selected;
+    }
 
     delay(inputDebounceDelay);
-    while (true) {
-      // Check all buttons and handle appropriately
-      for (byte i = 0; i < totalButtons; i++) {
-        if (isButtonPressed(buttonPins[i])) {
-          while (digitalRead(buttonPins[i]) == LOW)
-            ; // Wait for release
 
-          switch (i) {
-          case 0: // Previous option
-            selected = (selected == 0) ? totalSettings - 1 : selected - 1;
+    // Check all buttons and handle appropriately
+    for (byte i = 0; i < totalButtons; i++) {
+      if (isButtonPressed(buttonPins[i])) {
+        while (digitalRead(buttonPins[i]) == LOW)
+          ; // Wait for release
+
+        switch (i) {
+        case 0: // Previous option
+          selected = (selected == 0) ? totalSettings - 1 : selected - 1;
+          break;
+        case 1: // Next option
+          selected = (selected + 1) % totalSettings;
+          break;
+        case 2: // Select/Confirm
+          switch (selected) {
+          case 0:
+            setDateTime();
             break;
-          case 1: // Next option
-            selected = (selected + 1) % totalSettings;
+          case 1:
+            waterCalibrationTest();
             break;
-          case 2: // Select/Confirm
-            switch (selected) {
-            case 0:
-              setDateTime();
-              break;
-            case 1:
-              waterCalibrationTest();
-              break;
-            case 2:
-              disableMessages();
-              break;
-            }
-            return;
-          case 3: // Exit
-            printExitCurrentMenu();
-            return;
+          case 2:
+            disableMessages();
+            break;
           }
-          break; // Exit the for loop once a button is handled
+          return;
+        case 3: // Exit
+          printExitCurrentMenu();
+          return;
         }
+        break; // Exit the for loop once a button is handled
       }
     }
 
@@ -478,75 +471,87 @@ void setDateTime() {
 
   enum Step { SET_YEAR, SET_MONTH, SET_DAY, SET_HOUR, SET_MINUTE, DONE };
   Step step = SET_YEAR;
+  Step lastStep = DONE; // Force initial display
 
   while (step != DONE) {
-    lcd.clear();
+    // Only update display when step changes
+    if (step != lastStep) {
+      lcd.clear();
+      char buffer[17]; // 16 chars + null terminator
 
-    switch (step) {
-    case SET_YEAR:
-      printMessage(0, 0, "Set Year: " + year);
-      break;
-    case SET_MONTH:
-      printMessage(0, 0, "Set Month: " + month);
-      break;
-    case SET_DAY:
-      printMessage(0, 0, "Set Day: " + String(day));
-      break;
-    case SET_HOUR:
-      printMessage(0, 0, "Set Hour: " + hour);
-      break;
-    case SET_MINUTE:
-      printMessage(0, 0, "Set Minute: " + minute);
-      break;
-    default:
-      break;
-    }
-
-    printMessage(0, 1, "(-)(+)(M)Next");
-
-    while (true) {
-      // finished setting date and time
-      if (isButtonPressed(buttonPins[3])) {
-        printExitCurrentMenu();
-        return;
-      }
-
-      // finish setting current step
-      if (isButtonPressed(buttonPins[2])) {
-        step = static_cast<Step>(step + 1);
+      switch (step) {
+      case SET_YEAR:
+        sprintf(buffer, "Set Year: %d", year);
+        break;
+      case SET_MONTH:
+        sprintf(buffer, "Set Month: %d", month);
+        break;
+      case SET_DAY:
+        sprintf(buffer, "Set Day: %d", day);
+        break;
+      case SET_HOUR:
+        sprintf(buffer, "Set Hour: %d", hour);
+        break;
+      case SET_MINUTE:
+        sprintf(buffer, "Set Minute: %d", minute);
+        break;
+      default:
         break;
       }
 
-      // Handle increment/decrement buttons
-      int direction = 0;
-      if (isButtonPressed(buttonPins[0]))
-        direction = -1; // Decrement
-      if (isButtonPressed(buttonPins[1]))
-        direction = 1; // Increment
-
-      if (direction != 0) {
-        switch (step) {
-        case SET_YEAR:
-          year = constrain(year + direction, 2000, 2099);
-          break;
-        case SET_MONTH:
-          month = constrain(month + direction, 1, 12);
-          break;
-        case SET_DAY:
-          day = constrain(day + direction, 1, 31);
-          break;
-        case SET_HOUR:
-          hour = constrain(hour + direction, 0, 23);
-          break;
-        case SET_MINUTE:
-          minute = constrain(minute + direction, 0, 59);
-          break;
-        }
-        break;
-      }
+      printMessage(0, 0, buffer);
+      printMessage(0, 1, "(-)(+)(M)Next");
+      lastStep = step;
     }
 
-    delay(inputDebounceDelay);
+    bool buttonHandled = false;
+
+    // finished setting date and time
+    if (isButtonPressed(buttonPins[3])) {
+      printExitCurrentMenu();
+      return;
+    }
+
+    // finish setting current step
+    if (isButtonPressed(buttonPins[2])) {
+      step = static_cast<Step>(step + 1);
+      buttonHandled = true;
+    }
+
+    // Handle increment/decrement buttons
+    int direction = 0;
+    if (isButtonPressed(buttonPins[0]))
+      direction = -1; // Decrement
+    if (isButtonPressed(buttonPins[1]))
+      direction = 1; // Increment
+
+    if (direction != 0) {
+      switch (step) {
+      case SET_YEAR:
+        year = constrain(year + direction, 2000, 2099);
+        break;
+      case SET_MONTH:
+        month = constrain(month + direction, 1, 12);
+        break;
+      case SET_DAY:
+        day = constrain(day + direction, 1, 31);
+        break;
+      case SET_HOUR:
+        hour = constrain(hour + direction, 0, 23);
+        break;
+      case SET_MINUTE:
+        minute = constrain(minute + direction, 0, 59);
+        break;
+      }
+      buttonHandled = true;
+      lastStep = DONE; // Force display update
+    }
+
+    if (buttonHandled) {
+      delay(inputDebounceDelay);
+    } else {
+      delay(10); // Small delay when no button pressed
+    }
   }
 
   RtcDateTime newTime(year, month, day, hour, minute, 0);
@@ -733,12 +738,24 @@ void waterPlant() {
 }
 
 float readSoilMoisture() {
+  static unsigned long lastReading = 0;
+  static float lastMoisture = 0;
+  unsigned long now = millis();
+
+  // Cache reading for 1 second to avoid unnecessary sensor reads
+  if (now - lastReading < 1000) {
+    return lastMoisture;
+  }
+
   digitalWrite(pinSoilPower, HIGH);
+  delay(10); // Small delay for sensor stabilization
   lastRawMoistureValue = analogRead(pinSoilRead);
   digitalWrite(pinSoilPower, LOW);
-  float moisturePercent = calculateMoisture(lastRawMoistureValue);
 
-  return moisturePercent;
+  lastMoisture = calculateMoisture(lastRawMoistureValue);
+  lastReading = now;
+
+  return lastMoisture;
 }
 
 int calculateMoisture(int raw) {
