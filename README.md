@@ -6,6 +6,8 @@ An Arduino-based automatic plant watering system with smart monitoring, scheduli
 
 The AutoWaterPump is an intelligent plant watering system built on Arduino Uno that monitors soil moisture levels and automatically waters plants based on configurable schedules and thresholds. It features an LCD display, menu system, and multiple sensors to ensure optimal plant care.
 
+In this project, I focused on the hardware side. I learned soldering, reading and designing electrical schematics, working with sensor channels, and building stable circuits on perfboards.
+
 ## ✨ Features
 
 ### 🤖 Automatic Watering

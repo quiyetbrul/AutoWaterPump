@@ -3,6 +3,8 @@
 #include <RtcDS1302.h>
 #include <Wire.h>
 
+#include <string.h>
+
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 const byte CLK = 7;
@@ -100,19 +102,16 @@ bool isPlantOkayToWater();
 void formatTime(int &hour, bool &isPM);
 void printTime(const int hour, const bool isPM);
 void printMoistureValue();
-void printAutoModeDate(RtcDateTime t);
 void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
                    unsigned long minutesPart);
+void printMessage(int x, int y, const std::string &message);
+std::string getDate();
 
 void setup() {
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("  Created by:   ");
-  lcd.setCursor(0, 1);
-  lcd.print("  [Aqua");
-  lcd.write(243);
-  lcd.print("Works]");
+  printMessage(0, 0, "  Created by:   ");
+  printMessage(0, 1, "Quiyet Brul");
   delay(4000);
 
   for (byte i = 0; i < totalButtons; ++i) {
@@ -138,10 +137,9 @@ void loop() {
 
   if (isWaterDetected()) {
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Water Lvl Low!");
+    printMessage(0, 0, "Water Lvl Low!");
     lcd.setCursor(0, 1);
-    lcd.print("Please Add Water :)");
+    printMessage(0, 1, "Please add water");
     delay(5000);
   } else if (currentMenu == 0) {
     showMessageCycle();
@@ -155,8 +153,7 @@ void loop() {
 void displayStartup() {
   String title = "Water Pump Menu";
 
-  lcd.setCursor(0, 0);
-  lcd.print(title);
+  printMessage(0, 0, title);
   lcd.setCursor(0, 1);
   lcd.blink();
 
@@ -173,13 +170,11 @@ void showMessageCycle() {
   if (millis() - lastMessageSwitch >= messageDisplayDuration) {
     lcd.noBlink();
     lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(" ");
+    printMessage(0, 0, " ");
     lcd.write(243);
     lcd.print(" MainMenu ");
     lcd.write(243);
-    lcd.setCursor(0, 1);
-    lcd.print(messagesHomeScreen[messageIndex]);
+    printMessage(0, 1, messagesHomeScreen[messageIndex]);
 
     messageIndex = (messageIndex + 1) % totalMessages;
     lastMessageSwitch = millis();
@@ -194,18 +189,6 @@ void formatTime(int &hour, bool &isPM) {
       hour -= 12;
     isPM = true;
   }
-}
-
-void printTime(const int hour, const bool isPM) {
-  lcd.setCursor(0, 0);
-  if (hour < 10)
-    lcd.print('0');
-  lcd.print(hour);
-  lcd.print(showColon ? ':' : ' ');
-  if (now.Minute() < 10)
-    lcd.print('0');
-  lcd.print(now.Minute());
-  lcd.print(isPM ? " PM" : " AM");
 }
 
 void printMoistureValue() {
@@ -233,34 +216,38 @@ void printNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
     lcd.print(minutesPart);
     lcd.print("M");
   } else {
-    lcd.setCursor(10, 1);
-    lcd.print(totalSecondsRemaining);
-    lcd.print(" Sec");
+    printMessage(10, 1, totalSecondsRemaining + " Sec")
   }
 }
 
-void printAutoModeDate(RtcDateTime t) {
-  if (t.Month() < 10)
-    lcd.print('0');
-  lcd.print(t.Month());
-  lcd.print('/');
-  if (t.Day() < 10)
-    lcd.print('0');
-  lcd.print(t.Day());
-  lcd.print('/');
-  lcd.print(t.Year());
+std::string getTime(const int hour, const bool isPM) {
+  std::string time = hour < 10 ? "0" + hour : hour;
+  time += showColon ? ':' : ' ';
+  time += now.Minute() < 10 ? "0" + now.Minute() : now.Minute();
+  time += " " + isPM ? "PM" : "AM";
+
+  return time;
 }
 
-void printManualModeDate(RtcDateTime t) {
+std::string getDate() {
+  RtcDateTime t = rtc.GetDateTime();
+  std::string date = "";
   if (t.Month() < 10)
-    lcd.print('0');
-  lcd.print(t.Month());
-  lcd.print('/');
+    date += "0";
+  date += t.Month();
+  date += "/";
   if (t.Day() < 10)
-    lcd.print('0');
-  lcd.print(t.Day());
-  lcd.print('/');
-  lcd.print(t.Year());
+    date += "0";
+  date += t.Day();
+  date += "/";
+  date += t.Year();
+
+  return date;
+}
+
+void printMessage(int x, int y, const std::string &message) {
+  lcd.setCursor(x, y);
+  lcd.print(message);
 }
 
 void showMessageCycleClock() {
@@ -272,32 +259,29 @@ void showMessageCycleClock() {
   }
 
   RtcDateTime now = rtc.GetDateTime();
-  RtcDateTime t = rtc.GetDateTime();
-  bool isPM = false;
   int hour = now.Hour();
+  bool isPM = false;
   formatTime(hour, isPM);
-  printTime(hour, isPM);
+  std::string time = getTime(hour, isPM);
+  printMessage(0, 0, time);
 
   lcd.setCursor(10, 0);
   printMoistureValue();
 
   if (!isAutoModeEnabled) {
-    lcd.setCursor(0, 1);
-    printManualModeDate(t);
-  } else {
-    lcd.setCursor(0, 1);
+    std::string date = getDate();
+    printMessage(0, 1, date)
 
+  } else {
     if (millis() - lastMessageSwitch >= dateAndCountDownDelay) {
       displayDateMessage = !displayDateMessage;
       lastMessageSwitch = nowMs;
-      lcd.setCursor(0, 1);
-      lcd.print("                ");
-      lcd.setCursor(0, 1);
+      printMessage(0, 1, "                ");
     }
 
     if (displayDateMessage) {
-      lcd.setCursor(0, 1);
-      printAutoModeDate(t);
+      std::string date = getDate();
+      printMessage(0, 1, date)
     } else {
       unsigned long elaspedTime = nowMs - autoTimer;
       unsigned long remainingTime = 0;
@@ -310,7 +294,7 @@ void showMessageCycleClock() {
       unsigned long totalSecondsRemaining = remainingTime / 1000;
       unsigned long hoursPart = totalSecondsRemaining / 3600UL;
       unsigned long minutesPart = (totalSecondsRemaining % 3600UL) / 60UL;
-      lcd.print("Feeds in: ");
+      printMessage(0, 1, "Feeds in: ");
       printNextFeed(totalSecondsRemaining, hoursPart, minutesPart);
     }
   }
