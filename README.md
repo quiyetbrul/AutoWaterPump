@@ -8,7 +8,7 @@ The AutoWaterPump is an intelligent plant watering system built on Arduino Uno t
 
 In this project, I focused on the hardware side. I learned soldering, reading and designing electrical schematics, working with sensor channels, and building stable circuits on perfboards. I also learned so much more on saving and managing memory through little things like using the right data types.
 
-Learning computer architecture and assembly language helped me understand how to optimize the code for better performance and memory usage. This project was a great way to apply those concepts in a practical setting. I saved ~200 bytes of RAM and ~1300 bytes of Flash :D (I learned how to [disassemble LC4 object files](https://gitfront.io/r/quiyetbrul/hrpHZyirTkfn/lc4-disassembler/) using C, converting machine code back into human-readable assembly instructions.)
+Learning computer architecture and assembly language helped me understand how to optimize the code for better performance and memory usage. (I learned how to [disassemble LC4 object files](https://gitfront.io/r/quiyetbrul/hrpHZyirTkfn/lc4-disassembler/) using C, converting machine code back into human-readable assembly instructions.) This project was a great way to apply those concepts in a practical setting. I saved ~200 bytes of RAM and ~1300 bytes of Flash, respectively, ~10% and ~4% reduction from my first attempt at this project.
 
 ## ✨ Features
 
