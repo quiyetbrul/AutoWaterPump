@@ -217,8 +217,8 @@ void formatTime(int &hour, bool &isPM);
 String getMoistureValue();
 String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
                    unsigned long minutesPart);
-String getTime(const int hour, const bool isPM);
-String getDate();
+String getTime(const RtcDateTime now);
+String getDate(const RtcDateTime now);
 
 /**
  * @brief Initializes all hardware and peripherals
@@ -233,9 +233,9 @@ String getDate();
 void setup() {
   lcd.init();
   lcd.backlight();
-  printMessage(0, 0, "  Created by:   ");
-  printMessage(0, 1, "Quiyet Brul");
-  delay(4000);
+  printMessage(2, 0, "Created by:");
+  printMessage(2, 1, "Quiyet Brul");
+  delay(2000);
 
   for (unsigned char i = 0; i < totalButtons; ++i) {
     pinMode(buttonPins[i], INPUT_PULLUP);
@@ -265,7 +265,7 @@ void setup() {
  * - Handles menu transitions and resets menu state
  */
 void loop() {
-  if (isWaterDetected()) {
+  if (!isWaterDetected()) {
     lcd.clear();
     printMessage(0, 0, "Water Lvl Low!");
     printMessage(0, 1, "Please add water");
@@ -285,8 +285,8 @@ void loop() {
  */
 void displayStartup() {
   printMessage(0, 0, "Water Pump Menu");
-  printAnimation("    Loading....");
-  delay(bootWait);
+  printAnimation("    Loading...");
+  // delay(bootWait);
 }
 
 /**
@@ -298,7 +298,7 @@ void showMessageCycle() {
   if (millis() - lastMessageSwitch >= messageDisplayDuration) {
     lcd.noBlink();
     lcd.clear();
-    printMessage(0, 0, " MainMenu ");
+    printMessage(4, 0, "MainMenu");
     printMessage(0, 1, messagesHomeScreen[messageIndex]);
 
     messageIndex = (messageIndex + 1) % totalMessages;
@@ -392,7 +392,6 @@ bool isButtonPressed(unsigned char pin) {
 void showClock() {
   if (showInstructions) {
     printInstructions();
-    lcd.clear();
   }
 
   displayDateMessage = true;
@@ -444,14 +443,11 @@ void showMessageCycleClock() {
   }
 
   RtcDateTime now = rtc.GetDateTime();
-  int hour = now.Hour();
-  bool isPM = false;
-  formatTime(hour, isPM);
-  printMessage(0, 0, getTime(hour, isPM));
+  printMessage(0, 0, getTime(now));
   printMessage(10, 0, getMoistureValue());
 
   if (!isAutoModeEnabled) {
-    printMessage(0, 1, getDate());
+    printMessage(0, 1, getDate(now));
     return;
   }
 
@@ -462,7 +458,7 @@ void showMessageCycleClock() {
   }
 
   if (displayDateMessage) {
-    printMessage(0, 1, getDate());
+    printMessage(0, 1, getDate(now));
     return;
   }
 
@@ -771,8 +767,8 @@ void settingsMenu() {
 
 /**
  * @brief Sets the date and time on the RTC module
- * @details Interactive interface for setting year, month, day, hour, and minute
- * Uses increment/decrement buttons to adjust values and saves to RTC
+ * @details Interactive interface for setting year, month, day, hour, and
+ * minute Uses increment/decrement buttons to adjust values and saves to RTC
  */
 void setDateTime() {
   int year = 2025;
@@ -1069,8 +1065,6 @@ void disableMessages() {
       if (isButtonPressed(buttonPins[1])) {
         showInstructions = true;
         printInstructions();
-
-        lcd.clear();
         printMessage(0, 0, "M: Confirm/Next");
         printMessage(0, 1, "A: Cancel");
         delay(transitionDelay);
@@ -1196,8 +1190,6 @@ void printAnimation(String message) {
     lcd.print(message.charAt(i));
     delay(bootAnimationDelay);
   }
-  lcd.noBlink();
-  lcd.clear();
 }
 
 /**
@@ -1231,6 +1223,7 @@ void printInstructions() {
   printMessage(0, 0, "M: Confirm/Next");
   printMessage(0, 1, "A: Exit");
   delay(transitionDelay);
+  lcd.clear();
 }
 
 /**
@@ -1264,8 +1257,10 @@ String getMoistureValue() {
   char buffer[5]; // " 99%\0"
   if (mP < 10) {
     sprintf(buffer, "  %d%%", mP);
-  } else {
+  } else if (mP < 100) {
     sprintf(buffer, " %d%%", mP);
+  } else {
+    sprintf(buffer, "%d%%", mP);
   }
 
   return String(buffer);
@@ -1306,8 +1301,10 @@ String getNextFeed(const unsigned long totalSecondsRemaining,
  * @return Formatted time string (e.g., "02:30 PM" or "02 30 PM")
  * @details Uses global showColon variable to create blinking effect
  */
-String getTime(const int hour, const bool isPM) {
-  RtcDateTime now = rtc.GetDateTime();
+String getTime(const RtcDateTime now) {
+  bool isPM = false;
+  int hour = now.Hour();
+  formatTime(hour, isPM);
   char buffer[9]; // "99:99 PM\0"
   char separator = showColon ? ':' : ' ';
   sprintf(buffer, "%02d%c%02d %s", hour, separator, now.Minute(),
@@ -1318,14 +1315,14 @@ String getTime(const int hour, const bool isPM) {
 /**
  * @brief Formats current date from RTC as display string
  * @return Formatted date string (MM/DD/YYYY format)
- * @details Retrieves current date from DS1302 RTC and formats for LCD display:
+ * @details Retrieves current date from DS1302 RTC and formats for LCD
+ * display:
  * - Uses MM/DD/YYYY format with zero-padding
  * - Handles month/day values less than 10 with leading zeros
  * - Returns as String for consistent display formatting
  */
-String getDate() {
-  RtcDateTime t = rtc.GetDateTime();
+String getDate(const RtcDateTime now) {
   char buffer[11]; // "99/99/9999\0"
-  sprintf(buffer, "%02d/%02d/%04d", t.Month(), t.Day(), t.Year());
+  sprintf(buffer, "%02d/%02d/%04d", now.Month(), now.Day(), now.Year());
   return String(buffer);
 }
