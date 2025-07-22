@@ -706,8 +706,8 @@ void settingsMenu() {
   unsigned char selected = 0;
   unsigned char lastSelected = 255; // Force initial display
 
-  String options[totalSettings] = {"1.Set Time/Date", "2.Calibrate Test",
-                                   "3.Disable Msgs"};
+  String options[totalSettings] = {"1.Set Time/Date", "2.Calibrate Test"/*,
+                                   "3.Disable Msgs"*/};
 
   while (true) {
     // Only update display when selection changes
@@ -741,9 +741,9 @@ void settingsMenu() {
           case 1:
             waterCalibrationTest();
             break;
-          case 2:
-            disableMessages();
-            break;
+            // case 2:
+            //   disableMessages();
+            //   break;
           }
           return;
         case 3: // Exit
