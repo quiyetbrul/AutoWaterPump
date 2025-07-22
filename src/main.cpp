@@ -50,6 +50,7 @@ RtcDS1302<ThreeWire> rtc(rtcWire);
  */
 const byte buttonPins[] = {2, 3, 4, 5}; ///< Button pins: [-, +, M, A]
 const byte totalButtons = sizeof(buttonPins) / sizeof(buttonPins[0]);
+enum buttonNames { minus = 0, plus = 1, em = 2, aye = 3 };
 /** @} */
 
 /**
@@ -139,7 +140,6 @@ unsigned char lastButtonState;                ///< Previous button state
  */
 bool isAutoModeEnabled = false; ///< Flag indicating if auto watering is active
 bool showInstructions = false;  ///< Flag to show/hide instruction messages
-bool displayDateMessage = true; ///< Toggle between date and countdown display
 unsigned char currentMenu = 0;  ///< Current active menu (0 = main menu)
 unsigned char messageIndex = 0; ///< Index for cycling main menu messages
 unsigned long lastMessageSwitch = 0; ///< Last time main menu message switched
@@ -217,8 +217,8 @@ void formatTime(int &hour, bool &isPM);
 String getMoistureValue();
 String getNextFeed(unsigned long totalSecondsRemaining, unsigned long hoursPart,
                    unsigned long minutesPart);
-String getTime(const RtcDateTime now);
-String getDate(const RtcDateTime now);
+String getTime(const RtcDateTime &now);
+String getDate(const RtcDateTime &now);
 
 /**
  * @brief Initializes all hardware and peripherals
@@ -286,7 +286,6 @@ void loop() {
 void displayStartup() {
   printMessage(0, 0, "Water Pump Menu");
   printAnimation("    Loading...");
-  // delay(bootWait);
 }
 
 /**
@@ -390,11 +389,6 @@ bool isButtonPressed(unsigned char pin) {
  * - Continuous auto watering check when enabled
  */
 void showClock() {
-  if (showInstructions) {
-    printInstructions();
-  }
-
-  displayDateMessage = true;
   lastMessageSwitch = millis();
   lcd.clear();
 
@@ -402,28 +396,30 @@ void showClock() {
     showMessageCycleClock();
     autoWateringCheck();
 
-    if (isButtonPressed(buttonPins[2])) {
+    // press M to measure moisture lvl
+    if (isButtonPressed(buttonPins[em])) {
       lcd.clear();
       printMessage(0, 0, "Moisture Lvl:");
       printAnimation("  Measuring...  ");
       readSoilMoisture();
+      delay(transitionDelay);
+      printMessage(0, 1, "                ");
       printMessage(0, 1, getMoistureValue());
       delay(messageDisplayDuration);
       lcd.clear();
-      printMessage(0, 0, "      Done     ");
-      lcd.clear();
+      continue;
     }
-    if (isButtonPressed(buttonPins[3])) {
-      if (!isAutoModeEnabled) {
-        printExitCurrentMenu();
-        return;
+    if (isButtonPressed(buttonPins[aye])) {
+      if (isAutoModeEnabled) {
+        lcd.clear();
+        printMessage(2, 0, "[Auto Mode]");
+        delay(500);
+        printMessage(2, 1, "Disabled :(");
+        isAutoModeEnabled = false;
+        delay(2000);
       }
-      lcd.clear();
-      printMessage(0, 0, "  [Auto Mode]");
-      delay(500);
-      printMessage(0, 1, "  Disabled :(");
-      isAutoModeEnabled = false;
-      delay(2000);
+      printExitCurrentMenu();
+      return;
     }
     delay(inputDebounceDelay);
   }
@@ -445,21 +441,15 @@ void showMessageCycleClock() {
   RtcDateTime now = rtc.GetDateTime();
   printMessage(0, 0, getTime(now));
   printMessage(10, 0, getMoistureValue());
+  printMessage(0, 1, getDate(now));
 
   if (!isAutoModeEnabled) {
-    printMessage(0, 1, getDate(now));
     return;
   }
 
   if (millis() - lastMessageSwitch >= dateAndCountDownDelay) {
-    displayDateMessage = !displayDateMessage;
     lastMessageSwitch = nowMs;
     printMessage(0, 1, "                ");
-  }
-
-  if (displayDateMessage) {
-    printMessage(0, 1, getDate(now));
-    return;
   }
 
   unsigned long elaspedTime = nowMs - autoTimer;
@@ -497,14 +487,14 @@ void manualWatering() {
 
   while (isPlantOkayToWater()) {
     lcd.clear();
-    printMessage(0, 0, " Manual Water ");
+    printMessage(1, 0, "Manual Water");
     printMessage(0, 1, "(M)Hold (A):Esc ");
 
     bool currentlyWatering = false;
 
     while (true) {
       delay(inputDebounceDelay);
-      bool isMHeld = (digitalRead(buttonPins[2]) == LOW);
+      bool isMHeld = (digitalRead(buttonPins[em]) == LOW);
 
       // Handle pump state changes
       if (isMHeld != currentlyWatering) {
@@ -512,7 +502,7 @@ void manualWatering() {
 
         // Control pump based on current state
         if (currentlyWatering && isPlantOkayToWater()) {
-          printMessage(0, 1, "  Watering...   ");
+          printMessage(2, 1, "Watering...   ");
           digitalWrite(pumpValvePin, HIGH);
           analogWrite(pumpPin, pumpHighSetting);
         } else {
@@ -523,7 +513,7 @@ void manualWatering() {
       }
 
       // Handle exit button
-      if (isButtonPressed(buttonPins[3])) {
+      if (isButtonPressed(buttonPins[aye])) {
         // Stop pump if currently watering
         if (currentlyWatering) {
           analogWrite(pumpPin, 0);
@@ -563,6 +553,9 @@ void autoWatering() {
     printMessage(0, 1, "Needed...");
     delay(1500);
     waterCalibrationTest();
+  }
+
+  if (oneCupCalibrated <= 0) {
     return;
   }
 
@@ -582,9 +575,9 @@ void autoWatering() {
       while (true) {
         // Handle increment/decrement
         int direction = 0;
-        if (isButtonPressed(buttonPins[0]))
+        if (isButtonPressed(buttonPins[minus]))
           direction = -1;
-        if (isButtonPressed(buttonPins[1]))
+        if (isButtonPressed(buttonPins[plus]))
           direction = 1;
 
         if (direction != 0) {
@@ -594,7 +587,7 @@ void autoWatering() {
           break;
         }
 
-        if (isButtonPressed(buttonPins[2])) {
+        if (isButtonPressed(buttonPins[em])) {
           autoWaterDurationMillis =
               (unsigned long)(targetCups * oneCupCalibrated);
           waterDuration = autoWaterDurationMillis;
@@ -602,7 +595,7 @@ void autoWatering() {
           break;
         }
 
-        if (isButtonPressed(buttonPins[3])) {
+        if (isButtonPressed(buttonPins[aye])) {
           printExitCurrentMenu();
           return;
         }
@@ -617,9 +610,9 @@ void autoWatering() {
       while (true) {
         // Handle increment/decrement
         int direction = 0;
-        if (isButtonPressed(buttonPins[0]))
+        if (isButtonPressed(buttonPins[minus]))
           direction = -1;
-        if (isButtonPressed(buttonPins[1]))
+        if (isButtonPressed(buttonPins[plus]))
           direction = 1;
 
         if (direction != 0) {
@@ -629,13 +622,13 @@ void autoWatering() {
           break;
         }
 
-        if (isButtonPressed(buttonPins[2])) {
+        if (isButtonPressed(buttonPins[em])) {
           waterInterval = waterIntervalHour;
           step = DONE;
           break;
         }
 
-        if (isButtonPressed(buttonPins[3])) {
+        if (isButtonPressed(buttonPins[aye])) {
           printExitCurrentMenu();
           return;
         }
@@ -815,22 +808,22 @@ void setDateTime() {
     bool buttonHandled = false;
 
     // finished setting date and time
-    if (isButtonPressed(buttonPins[3])) {
+    if (isButtonPressed(buttonPins[aye])) {
       printExitCurrentMenu();
       return;
     }
 
     // finish setting current step
-    if (isButtonPressed(buttonPins[2])) {
+    if (isButtonPressed(buttonPins[em])) {
       step = static_cast<Step>(step + 1);
       buttonHandled = true;
     }
 
     // Handle increment/decrement buttons
     int direction = 0;
-    if (isButtonPressed(buttonPins[0]))
+    if (isButtonPressed(buttonPins[minus]))
       direction = -1; // Decrement
-    if (isButtonPressed(buttonPins[1]))
+    if (isButtonPressed(buttonPins[plus]))
       direction = 1; // Increment
 
     if (direction != 0) {
@@ -897,9 +890,9 @@ void waterCalibrationTest() {
     while (true) {
       // Handle increment/decrement buttons
       int direction = 0;
-      if (isButtonPressed(buttonPins[0]))
+      if (isButtonPressed(buttonPins[minus]))
         direction = -1;
-      if (isButtonPressed(buttonPins[1]))
+      if (isButtonPressed(buttonPins[plus]))
         direction = 1;
 
       if (direction != 0 && step == SET_DURATION) {
@@ -908,7 +901,7 @@ void waterCalibrationTest() {
         break;
       }
 
-      if (isButtonPressed(buttonPins[2])) {
+      if (isButtonPressed(buttonPins[em])) {
         lcd.clear();
         lcd.print(waterTestDuration);
         delay(4000);
@@ -916,7 +909,7 @@ void waterCalibrationTest() {
         break;
       }
 
-      if (isButtonPressed(buttonPins[3])) {
+      if (isButtonPressed(buttonPins[aye])) {
         printExitCurrentMenu();
         return;
       }
@@ -937,9 +930,9 @@ void waterCalibrationTest() {
       while (true) {
         // Handle increment/decrement buttons
         int direction = 0;
-        if (isButtonPressed(buttonPins[0]))
+        if (isButtonPressed(buttonPins[minus]))
           direction = -1;
-        if (isButtonPressed(buttonPins[1]))
+        if (isButtonPressed(buttonPins[plus]))
           direction = 1;
 
         if (direction != 0 && step == SET_DURATION) {
@@ -948,12 +941,12 @@ void waterCalibrationTest() {
           break;
         }
 
-        if (isButtonPressed(buttonPins[2])) {
+        if (isButtonPressed(buttonPins[em])) {
           step = static_cast<SettingStep>(step + 1);
           break;
         }
 
-        if (isButtonPressed(buttonPins[3])) {
+        if (isButtonPressed(buttonPins[aye])) {
           printExitCurrentMenu();
           return;
         }
@@ -968,12 +961,12 @@ void waterCalibrationTest() {
     delay(100);
 
     while (true) {
-      if (isButtonPressed(buttonPins[0])) {
+      if (isButtonPressed(buttonPins[minus])) {
         printExitCurrentMenu();
         return;
       }
 
-      if (isButtonPressed(buttonPins[1])) {
+      if (isButtonPressed(buttonPins[plus])) {
         // Run the water test
         if (isPlantOkayToWater()) {
           lcd.clear();
@@ -997,18 +990,18 @@ void waterCalibrationTest() {
         printMessage(0, 1, "(-)=No (+)=Yes");
 
         while (true) {
-          if (isButtonPressed(buttonPins[0])) {
+          if (isButtonPressed(buttonPins[minus])) {
             // User says no - ask if they want to retry
             lcd.clear();
             printMessage(0, 0, "Retry test?");
             printMessage(0, 1, "(-)=No (+)=Yes");
 
             while (true) {
-              if (isButtonPressed(buttonPins[0])) {
+              if (isButtonPressed(buttonPins[minus])) {
                 printExitCurrentMenu();
                 return;
               }
-              if (isButtonPressed(buttonPins[1])) {
+              if (isButtonPressed(buttonPins[plus])) {
                 step = SET_DURATION; // Go back to duration setting
                 calibrationDone = false;
                 break;
@@ -1017,7 +1010,7 @@ void waterCalibrationTest() {
             break;
           }
 
-          if (isButtonPressed(buttonPins[1])) {
+          if (isButtonPressed(buttonPins[plus])) {
             // User says yes - save calibration
             oneCupCalibrated = waterTestDuration;
             lcd.clear();
@@ -1048,9 +1041,9 @@ void disableMessages() {
   printMessage(0, 1, "(-)= No (+)=Yes");
 
   while (true) {
-    if (isButtonPressed(buttonPins[0])) {
+    if (isButtonPressed(buttonPins[minus])) {
       delay(inputDebounceDelay);
-      if (isButtonPressed(buttonPins[0])) {
+      if (isButtonPressed(buttonPins[minus])) {
         showInstructions = false;
         lcd.clear();
         printMessage(0, 0, "  Tip messages:  ");
@@ -1060,9 +1053,9 @@ void disableMessages() {
         return;
       }
     }
-    if (isButtonPressed(buttonPins[1])) {
+    if (isButtonPressed(buttonPins[plus])) {
       delay(inputDebounceDelay);
-      if (isButtonPressed(buttonPins[1])) {
+      if (isButtonPressed(buttonPins[plus])) {
         showInstructions = true;
         printInstructions();
         printMessage(0, 0, "M: Confirm/Next");
@@ -1190,6 +1183,7 @@ void printAnimation(String message) {
     lcd.print(message.charAt(i));
     delay(bootAnimationDelay);
   }
+  lcd.noBlink();
 }
 
 /**
@@ -1202,7 +1196,7 @@ void printExitCurrentMenu() {
   lcd.clear();
   printMessage(0, 0, "Please Wait ^_^ ");
   delay(200);
-  printMessage(0, 1, "    Exiting");
+  printMessage(4, 1, "Exiting");
   delay(exitDelay);
 }
 
@@ -1301,7 +1295,7 @@ String getNextFeed(const unsigned long totalSecondsRemaining,
  * @return Formatted time string (e.g., "02:30 PM" or "02 30 PM")
  * @details Uses global showColon variable to create blinking effect
  */
-String getTime(const RtcDateTime now) {
+String getTime(const RtcDateTime &now) {
   bool isPM = false;
   int hour = now.Hour();
   formatTime(hour, isPM);
@@ -1321,7 +1315,7 @@ String getTime(const RtcDateTime now) {
  * - Handles month/day values less than 10 with leading zeros
  * - Returns as String for consistent display formatting
  */
-String getDate(const RtcDateTime now) {
+String getDate(const RtcDateTime &now) {
   char buffer[11]; // "99/99/9999\0"
   sprintf(buffer, "%02d/%02d/%04d", now.Month(), now.Day(), now.Year());
   return String(buffer);
