@@ -879,49 +879,54 @@ void setDateTime() {
  * - Saves calibration value for automatic watering calculations
  */
 void waterCalibrationTest() {
+  if (!isWaterDetected()) {
+    printMessage(0, 0, "No water in tank!");
+    printMessage(0, 1, "Please add water!");
+    delay(5000);
+    return;
+  }
+
   unsigned long waterTestDuration = 30000UL;
+  bool testReady = false;
+  printMessage(0, 0, "Remove hose from");
+  printMessage(0, 1, "Pot (+)=Continue");
+  while (!isButtonPressed(buttonPins[plus]))
+    ;
+  delay(inputDebounceDelay);
 
-  enum SettingStep { SET_DURATION, DONE };
-  SettingStep step = SET_DURATION;
-
-  bool calibrationDone = false;
-
-  while (!calibrationDone) {
-    while (step != DONE) {
+  while (true) {
+    if (!testReady) {
+      // Set duration
       lcd.clear();
       printMessage(0, 0, "Water Duration");
-      if (step == SET_DURATION) {
-        printMessage(0, 1, "(sec): " + String(waterTestDuration / 1000.0));
-      }
+      printMessage(0, 1, "(sec): " + String(waterTestDuration / 1000));
 
-      // set water duration for how long water should be dispensed
       while (true) {
-        if (isButtonPressed(buttonPins[minus])) {
-          if (step == SET_DURATION && waterTestDuration >= 1000)
-            waterTestDuration -= 1000;
-          break;
-        } else if (isButtonPressed(buttonPins[plus])) {
-          if (step == SET_DURATION)
-            waterTestDuration += 1000;
-          break;
-        } else if (isButtonPressed(buttonPins[em])) {
-          lcd.clear();
-          lcd.print(waterTestDuration);
-          delay(4000);
-          step = static_cast<SettingStep>(step + 1);
-          break;
-        } else if (isButtonPressed(buttonPins[aye])) {
+        if (isButtonPressed(buttonPins[minus]) && waterTestDuration > 1000) {
+          waterTestDuration -= 1000;
+          continue;
+        }
+        if (isButtonPressed(buttonPins[plus])) {
+          waterTestDuration += 1000;
+          continue;
+        }
+        if (isButtonPressed(buttonPins[em])) {
+          testReady = true;
+          continue;
+        }
+        if (isButtonPressed(buttonPins[aye])) {
           printExitCurrentMenu();
           return;
         }
       }
       delay(200);
+      continue;
     }
 
+    // Ask to start test
     lcd.clear();
     printMessage(0, 0, "Start Cal Test?");
     printMessage(0, 1, "(-)=No (+)=Yes");
-    delay(100);
 
     while (true) {
       if (isButtonPressed(buttonPins[minus])) {
@@ -929,7 +934,7 @@ void waterCalibrationTest() {
         return;
       }
       if (isButtonPressed(buttonPins[plus])) {
-        // dispense water
+        // Dispense water
         lcd.clear();
         printMessage(0, 0, "Dispensing..");
         printMessage(0, 1, "Please Wait!");
@@ -940,47 +945,41 @@ void waterCalibrationTest() {
         analogWrite(pumpPin, 0);
         delay(pumpValveTiming);
         digitalWrite(pumpValvePin, LOW);
+
         lcd.clear();
         printMessage(0, 0, "Done!");
         delay(exitDelay);
+
+        // Check if output was 1 cup
         lcd.clear();
         printMessage(0, 0, "1 cup output?");
         printMessage(0, 1, "(-)=No (+)=Yes");
 
-        // retry calibration if needed
         while (true) {
           if (isButtonPressed(buttonPins[minus])) {
-            lcd.clear();
-            printMessage(0, 0, "Retry test?");
-            printMessage(0, 1, "(-)=No (+)=Yes");
-
-            while (true) {
-              if (isButtonPressed(buttonPins[minus])) {
-                printExitCurrentMenu();
-                delay(1000);
-                calibrationDone = true;
-                break;
-              }
-              if (isButtonPressed(buttonPins[plus])) {
-                step = SET_DURATION;
-                break;
-              }
-            }
+            testReady = false; // Retry - go back to duration setting
             break;
           }
           if (isButtonPressed(buttonPins[plus])) {
+            // Save calibration and exit
             oneCupCalibrated = waterTestDuration;
             lcd.clear();
             printMessage(0, 0, "1Cup Calibration");
             delay(500);
             printMessage(4, 1, "Saved!");
             delay(2000);
-            lcd.clear();
-            calibrationDone = true;
-            break;
+            return;
+          }
+          if (isButtonPressed(buttonPins[aye])) {
+            printExitCurrentMenu();
+            return;
           }
         }
         break;
+      }
+      if (isButtonPressed(buttonPins[aye])) {
+        printExitCurrentMenu();
+        return;
       }
     }
   }
@@ -1074,7 +1073,7 @@ unsigned char calculateMoisture(unsigned int raw) {
  * @return true if water level is low, false if adequate
  * @details Simple digital read from water level sensor pin
  */
-bool isWaterDetected() { return digitalRead(waterSensorPin) == HIGH; }
+bool isWaterDetected() { return digitalRead(waterSensorPin) != HIGH; }
 
 /**
  * @brief Comprehensive safety check before watering
